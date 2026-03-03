@@ -1,0 +1,7 @@
+general:
+  push_to_talk_key: "right ctrl"
+
+stt:
+  model: "large-v3-turbo"
+  device: "cuda"
+  compute_type: "int8_bfloat16" #~1,1гб VRAM
