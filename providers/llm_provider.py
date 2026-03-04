@@ -1,5 +1,6 @@
 from ollama import AsyncClient
 import os
+import time
 from typing import Any, Dict, List
 
 class LLMProvider:
@@ -29,6 +30,7 @@ class LLMProvider:
         })
 
         try:
+            start = time.perf_counter()
             response = await self.client.chat(
                 model=self.config["model"],
                 messages=messages,
@@ -38,6 +40,7 @@ class LLMProvider:
                     "num_ctx": self.config["num_ctx"]
                 }
             )
+            print(f"LLM: {time.perf_counter() - start:.3f} сек")
             return response["message"]["content"].strip()
         
         except Exception as e:
