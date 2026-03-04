@@ -1,7 +1,13 @@
 general:
   push_to_talk_key: "right ctrl"
 
-stt:
+stt: #~1,1гб VRAM
   model: "large-v3-turbo"
   device: "cuda"
-  compute_type: "int8_bfloat16" #~1,1гб VRAM
+  compute_type: "int8_bfloat16"
+
+tts: #~2,4гб VRAM
+  model: "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+  attn_implementation: "sdpa"
+  max_seq_len: 192
+  voice: "voices/example.wav"

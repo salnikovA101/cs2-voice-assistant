@@ -1,4 +1,5 @@
 from providers.stt_provider import STTProvider
+from providers.tts_provider import TTSProvider
 from utils.audio_recorder import AudioRecorder
 from typing import Any, Dict
 
@@ -7,7 +8,9 @@ class Assistant:
     def __init__(self, config: Dict[str, Any]) -> None:
         self.config: Dict[str, Any] = config
         self.stt = STTProvider(config)
+        self.tts = TTSProvider(config)
         self.recorder = AudioRecorder()
+        self.tts._voiceover_sync("Слушаю")
 
     async def run_pipeline(self) -> None:
         key: str = self.config["general"]["push_to_talk_key"]
@@ -21,3 +24,6 @@ class Assistant:
             return
 
         print(f"Ты сказал: {text}")
+
+        await self.tts.voiceover(text)
+
