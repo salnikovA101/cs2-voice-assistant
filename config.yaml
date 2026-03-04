@@ -9,5 +9,13 @@ stt: #~1,1гб VRAM
 tts: #~2,4гб VRAM
   model: "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
   attn_implementation: "sdpa"
-  max_seq_len: 192
+  max_seq_len: 256
   voice: "voices/example.wav"
+
+llm:
+  model: "qwen3-vl:4b"
+  host: "http://127.0.0.1:11434"
+  temperature: 0.5
+  num_predict: 2000
+  num_ctx: 4096
+  prompt_mode: "smart" # humor or smart

@@ -9,3 +9,6 @@ PyYAML
 soundfile
 jiwer
 faster_qwen3_tts
+opencv-python
+mss
+ollama
