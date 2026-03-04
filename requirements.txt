@@ -1,3 +1,6 @@
+# torch ставится вручную под RTX 50XX (Blackwell):
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+
 faster-whisper
 sounddevice
 numpy
@@ -5,3 +8,4 @@ keyboard
 PyYAML
 soundfile
 jiwer
+faster_qwen3_tts
