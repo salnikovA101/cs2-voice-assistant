@@ -38,6 +38,6 @@ class TTSProvider:
                 stream.write(np.asarray(audio_chunk, dtype=np.float32).reshape(-1, 1))
 
                 if first_chunk:
-                    print(f"Первый звук пошёл через {time.time() - start:.2f} сек!")
+                    print(f"TTS: {time.time() - start:.2f} сек")
                     first_chunk = False
         torch.cuda.empty_cache()
