@@ -1,10 +1,18 @@
 import asyncio
 import yaml
 import os
+import logging
 from typing import Any, Dict
 from dotenv import load_dotenv
 
 from core.assistant import Assistant
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -15,19 +23,18 @@ async def main() -> None:
     config["llm"]["api_key"] = os.getenv("API_KEY")
     assistant = Assistant(config)
     
-    print("CS2 Voice Assistant готов!")
+    logger.info("CS2 Voice Assistant готов!")
     ptt_key = config["general"]["push_to_talk_key"]
 
     while True:
-        print(f"Удерживай '{ptt_key}' и говори")
+        logger.info(f"Удерживай '{ptt_key}' и говори")
         await assistant.run_pipeline()
         await asyncio.sleep(0.01)
-
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Bye")
+        logger.info("Bye")
     except Exception as e:
-        print(f"Критическая ошибка: {e}")
+        logger.error(f"Критическая ошибка: {e}")

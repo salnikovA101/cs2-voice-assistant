@@ -2,8 +2,11 @@ import numpy as np
 import sounddevice as sd
 import asyncio
 import keyboard
+import logging
 from typing import List
 import numpy.typing as npt
+
+logger = logging.getLogger(__name__)
 
 class AudioRecorder:
     def __init__(self, samplerate: int = 16000) -> None:
@@ -11,7 +14,7 @@ class AudioRecorder:
         self.recording: bool = False
         self.chunks: List[np.ndarray] = []
 
-    def _callback(self, indata: np.ndarray, frames, time, status):
+    def _callback(self, indata: np.ndarray, frames, time_info, status):
         if self.recording:
             self.chunks.append(indata.copy())
 
@@ -22,7 +25,7 @@ class AudioRecorder:
         while not keyboard.is_pressed(key):
             await asyncio.sleep(0.01)
 
-        print(f"Отпусти '{key}' чтобы закончить")
+        logger.info(f"Отпусти '{key}', чтобы закончить")
         self.recording = True
 
         with sd.InputStream(
