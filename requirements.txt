@@ -9,6 +9,6 @@ PyYAML
 soundfile
 faster_qwen3_tts
 opencv-python
-mss
-ollama
 google-genai
+dotenv
+torch

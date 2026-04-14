@@ -1,47 +1,42 @@
-from ollama import AsyncClient
-import os
+import asyncio
 import time
-from typing import Any, Dict, List
+import logging
+from typing import Any, Dict
+
+from google import genai
+from google.genai.types import GenerateContentConfig, Part, ThinkingConfig, ThinkingLevel
+
+logger = logging.getLogger(__name__)
 
 class LLMProvider:
-    def __init__(self, config: Dict[str, Any]) -> None:
-        self.config: Dict[str, Any] = config["llm"]
-        self.client = AsyncClient(host=self.config["host"])
-        self.system_prompt: str = self._load_prompt()
-        print("LLM готов")
+    def __init__(self, config: Dict[str, Any], system_prompt: str) -> None:
+        self.config = config["llm"]
+        self.model_name = self.config["model"]
+        self.system_prompt = system_prompt
+        self.client = genai.Client(api_key=self.config["api_key"])
+        logger.info(f"Gemini {self.model_name} готов")
 
-    def _load_prompt(self) -> str:
-        mode = self.config["prompt_mode"]
-        filename = "smart.txt" if mode == "smart" else "humor.txt"
-        path = f"core/prompts/{filename}"
-        
-        if os.path.exists(path):
-            with open(path, encoding='utf-8') as f:
-                return f.read().strip()
-        return ""
-
-    async def generate_response(self, user_text: str, screen_base64: str) -> str:
-        messages: List[Dict[str, Any]] = [{"role": "system", "content": self.system_prompt}]
-
-        messages.append({
-            "role": "user",
-            "content": user_text,
-            "images": [screen_base64]
-        })
-
+    async def generate_response(self, user_text: str, image_bytes: bytes) -> str:
         try:
             start = time.perf_counter()
-            response = await self.client.chat(
-                model=self.config["model"],
-                messages=messages,
-                options={
-                    "temperature": self.config["temperature"],
-                    "num_predict": self.config["num_predict"],
-                    "num_ctx": self.config["num_ctx"]
-                }
+            
+            config = GenerateContentConfig(
+                system_instruction=self.system_prompt,
+                temperature=self.config.get("temperature", 0.9),
+                max_output_tokens=self.config.get("max_output_tokens", 2000),
+                thinking_config=ThinkingConfig(thinking_level="high")
             )
-            print(f"LLM: {time.perf_counter() - start:.3f} сек")
-            return response["message"]["content"].strip()
-        
+
+            response = await self.client.aio.models.generate_content(
+                model=self.model_name,
+                contents=[user_text, Part.from_bytes(data=image_bytes, mime_type="image/jpeg")],
+                config=config
+            )
+
+            logger.info(f"LLM: Gemini ответил за {time.perf_counter() - start:.2f} сек")
+            text = response.text or "Gemini вернул пустой ответ."
+            return text.strip()
+
         except Exception as e:
-            return f"Ошибка при обращении к LLM {e}."
+            logger.error(f"Ошибка Gemini: {str(e)}")
+            return f"Ошибка Gemini: {str(e)}"
