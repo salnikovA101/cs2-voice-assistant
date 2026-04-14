@@ -1,13 +1,18 @@
 import asyncio
 import yaml
+import os
 from typing import Any, Dict
+from dotenv import load_dotenv
 
 from core.assistant import Assistant
+
+load_dotenv()
 
 async def main() -> None:
     with open("config.yaml", encoding="utf-8") as file:
         config: Dict[str, Any] = yaml.safe_load(file)
     
+    config["llm"]["api_key"] = os.getenv("API_KEY")
     assistant = Assistant(config)
     
     print("CS2 Voice Assistant готов!")

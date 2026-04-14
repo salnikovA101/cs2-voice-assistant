@@ -12,10 +12,9 @@ tts: #~2,4гб VRAM
   max_seq_len: 256
   voice: "voices/example.wav"
 
-llm:
-  model: "qwen3-vl:4b"
-  host: "http://127.0.0.1:11434"
-  temperature: 0.5
-  num_predict: 2000
-  num_ctx: 4096
+llm: #~0гб VRAM
+  model: "gemini-3.1-flash-lite-preview"
+  api_key: ""
+  temperature: 0.8
+  max_output_tokens: 400
   prompt_mode: "smart" # humor or smart
