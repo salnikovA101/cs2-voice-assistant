@@ -10,5 +10,6 @@ soundfile
 faster_qwen3_tts
 opencv-python
 google-genai
-dotenv
+python-dotenv
 torch
+dxcam
