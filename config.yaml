@@ -20,6 +20,7 @@ tts: #~2,4гб VRAM
 llm: #~0гб VRAM
   model: "gemma-4-26b-a4b-it"
   api_key: ""
-  temperature: 0.9
+  temperature: 1.0
   max_output_tokens: 1000
+  history_len: 3
   prompt_mode: "humor" # humor or smart
