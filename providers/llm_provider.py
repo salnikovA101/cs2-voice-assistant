@@ -9,12 +9,26 @@ from google.genai.types import GenerateContentConfig, Part, ThinkingConfig, Thin
 logger = logging.getLogger(__name__)
 
 class LLMProvider:
-    def __init__(self, config: Dict[str, Any], system_prompt: str) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
         self.config = config["llm"]
         self.model_name = self.config["model"]
-        self.system_prompt = system_prompt
+        self.system_prompt = self._load_prompt(config)
         self.client = genai.Client(api_key=self.config["api_key"])
         logger.info(f"Gemini {self.model_name} готов")
+
+    def _load_prompt(self, config: Dict[str, Any]) -> str:
+        if config["llm"].get("prompt_mode", "smart") == "smart":
+            with open("core/prompts/smart.txt", encoding="utf-8") as file:
+                prompt = file.read().strip()
+        else:
+            with open("core/prompts/humor.txt", encoding="utf-8") as file:
+                prompt = file.read().strip()
+
+        if config["tts"].get("mode", "speed") == "speed":
+            with open("core/prompts/silero_fix.txt", encoding="utf-8") as file:
+                prompt += f"\n{file.read().strip()}"
+        
+        return prompt
 
     async def generate_response(self, user_text: str, image_bytes: bytes) -> str:
         try:
