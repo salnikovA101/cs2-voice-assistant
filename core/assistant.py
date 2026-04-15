@@ -2,7 +2,6 @@ import logging
 import cv2
 import numpy as np
 from providers.stt_provider import STTProvider
-from providers.tts_provider import TTSProvider
 from providers.ocr_provider import OCRProvider
 from providers.llm_provider import LLMProvider
 from utils.audio_recorder import AudioRecorder
@@ -14,8 +13,15 @@ class Assistant:
     def __init__(self, config: Dict[str, Any]) -> None:
         self.config: Dict[str, Any] = config
         self.stt = STTProvider(config)
-        self.tts = TTSProvider(config)
-        self.llm = LLMProvider(config, "")
+
+        if self.config["tts"].get("mode", "quality") == "speed":
+            from providers.tts_fast_provider import FastTTSProvider
+            self.tts = FastTTSProvider(config)
+        else:
+            from providers.tts_provider import TTSProvider
+            self.tts = TTSProvider(config)
+        
+        self.llm = LLMProvider(config)
         self.ocr = OCRProvider()
         self.recorder = AudioRecorder()
         self.tts._voiceover_sync("Слушаю")

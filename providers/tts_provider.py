@@ -30,7 +30,7 @@ class TTSProvider:
     def _voiceover_sync(self, text: str) -> None:
         start = time.perf_counter()
         first_chunk = True
-        with sd.OutputStream(samplerate=24000, channels=1, dtype="float32") as stream:
+        with sd.OutputStream(samplerate=24000, channels=1, dtype="float32", blocksize=2048, latency="high") as stream:
             for audio_chunk, _, _ in self.model.generate_voice_clone_streaming(
                 text=text,
                 language="Russian",
@@ -44,4 +44,3 @@ class TTSProvider:
                 if first_chunk:
                     logger.info(f"TTS: {time.perf_counter() - start:.2f} сек")
                     first_chunk = False
-        torch.cuda.empty_cache()

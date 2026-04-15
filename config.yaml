@@ -7,14 +7,19 @@ stt: #~1,1гб VRAM
   compute_type: "int8_bfloat16"
 
 tts: #~2,4гб VRAM
+  mode: "speed" # "quality" - Qwen3 или "speed" - Silero v5
+  # Qwen:
   model: "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
   attn_implementation: "sdpa"
-  max_seq_len: 256
+  max_seq_len: 1024
   voice: "voices/example.wav"
+  # Silero
+  silero_speaker: "baya"
+  sample_rate: 48000
 
 llm: #~0гб VRAM
   model: "gemma-4-26b-a4b-it"
   api_key: ""
-  temperature: 0.8
-  max_output_tokens: 400
-  prompt_mode: "smart" # humor or smart
+  temperature: 0.9
+  max_output_tokens: 1000
+  prompt_mode: "humor" # humor or smart
