@@ -35,7 +35,6 @@ class LLMProvider:
     async def generate_response(self, user_text: str, image_bytes: bytes) -> str:
         try:
             start = time.perf_counter()
-            print(self.history)
             config = GenerateContentConfig(
                 system_instruction=self.system_prompt,
                 temperature=self.config.get("temperature", 0.9),
