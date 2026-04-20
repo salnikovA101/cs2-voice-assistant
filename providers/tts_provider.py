@@ -26,6 +26,12 @@ class TTSProvider:
         if not text:
             return
         await asyncio.to_thread(self._voiceover_sync, text)
+    
+    def unload(self) -> None:
+        if hasattr(self, "model"):
+            del self.model
+            torch.cuda.empty_cache()
+            logger.info("FasterQwen3TTS выгружена из VRAM")
 
     def _voiceover_sync(self, text: str) -> None:
         start = time.perf_counter()

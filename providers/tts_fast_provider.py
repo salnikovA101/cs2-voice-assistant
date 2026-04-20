@@ -4,12 +4,13 @@ import torch
 import logging
 import time
 import asyncio
+from typing import Any, Dict
 from silero import silero_tts
 
 logger = logging.getLogger(__name__)
 
 class FastTTSProvider:
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
         self.tts_config = config["tts"]
         self.device = torch.device('cuda')
         logger.info("Загрузка Silero TTS V5...")
@@ -23,6 +24,9 @@ class FastTTSProvider:
         if not text:
             return
         await asyncio.to_thread(self._voiceover_sync, text)
+
+    def unload(self) -> None:
+        pass
 
     def _voiceover_sync(self, text: str) -> None:
         start = time.perf_counter()
