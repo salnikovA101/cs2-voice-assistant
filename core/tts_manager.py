@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
-from providers.tts_provider import TTSProvider
-from providers.tts_fast_provider import FastTTSProvider
+from tts.providers.quality_tts import TTSProvider
+from tts.providers.fast_tts import FastTTSProvider
 
 class TTSManager:
     def __init__(self, config: Dict[str, Any], mode: str = "speed") -> None:
