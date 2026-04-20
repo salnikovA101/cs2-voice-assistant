@@ -3,9 +3,9 @@ import time
 import logging
 from typing import Any, Dict, Deque
 from collections import deque
-
 from google import genai
 from google.genai.types import GenerateContentConfig, Part, ThinkingConfig, ThinkingLevel
+from core.history_manager import HistoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class LLMProvider:
         self.config = config["llm"]
         self.model_name = self.config["model"]
         self.client = genai.Client(api_key=self.config["api_key"])
-        self.history: Deque[Dict[str, str]] = deque(maxlen=self.config.get("history_len", 4))
+        self.history = HistoryManager(self.config.get("history_len", 4))
         logger.info(f"Gemini {self.model_name} готов")
 
     async def generate_response(self, prompt: str, user_text: str, image_bytes: bytes) -> str:
@@ -27,11 +27,7 @@ class LLMProvider:
                 thinking_config=ThinkingConfig(thinking_level="high")
             )
 
-            contents = []
-
-            for elem in self.history:
-                contents.append(f"User: {elem['q']}")
-                contents.append(f"Assistant: {elem['a']}")
+            contents = self.history.get_gemini()
 
             contents.append(user_text)
             contents.append(Part.from_bytes(data=image_bytes, mime_type="image/jpeg"))
@@ -43,7 +39,7 @@ class LLMProvider:
             )
 
             text = response.text or "Gemini вернул пустой ответ."
-            self.history.append({'q': user_text, 'a': text.strip()})
+            self.history.add_entry(user_text, text.strip())
             logger.info(f"LLM: Gemini ответил за {time.perf_counter() - start:.2f} сек")
             return text.strip()
 
