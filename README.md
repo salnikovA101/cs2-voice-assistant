@@ -15,14 +15,14 @@
 
 ## ✨ Возможности
 
-- **Видит экран** — DXCamera (максимально быстро) + Gemini Vision
+- **Видит экран** — DXCamera + Gemini Vision
 - **Русская речь** — Faster-Whisper (отлично понимает CS2-сленг)
 - **Два режима TTS**:
-  - **Speed** — Silero V5 (самый быстрый отклик)
-  - **Quality** — FasterQwen3TTS с клонированием твоего голоса
+  - **Speed** — Silero V5 (быстрый отклик)
+  - **Quality** — FasterQwen3TTS с клонированием любого твоего голоса
 - **Два стиля ответов** (меняются в `config.yaml`):
-  - `smart` — максимально полезный анализ
-  - `humor` — трэш, мемы и угар
+  - `smart` — полезный анализ
+  - `humor` — юмор и угар
 - **История диалога** (настраивается)
 - **Push-to-Talk** (любая клавиша)
 - Работает **поверх игры**, без оверлеев
@@ -119,13 +119,13 @@ CS2-VOICE-ASSISTANT/
 │   │   ├── silero_fix.txt
 │   │   └── smart.txt
 │   ├── assistant.py
-│   ├── context.py
-│   └── providers/
-│       ├── llm_provider.py
-│       ├── ocr_provider.py
-│       ├── stt_provider.py
-│       ├── tts_fast_provider.py
-│       └── tts_provider.py
+│   └── context.py
+├── providers/
+│   ├── llm_provider.py
+│   ├── ocr_provider.py
+│   ├── stt_provider.py
+│   ├── tts_fast_provider.py
+│   └── tts_provider.py
 ├── utils/
 │   └── audio_recorder.py
 ├── voices/                  # сюда клади свои референсные голоса
