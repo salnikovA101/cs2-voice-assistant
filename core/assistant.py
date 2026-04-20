@@ -3,7 +3,7 @@ import logging
 import cv2
 import numpy as np
 from core.prompt_loader import PromptLoader
-from core.tts_manager import TTSManager
+from tts.manager import TTSManager
 from providers.stt_provider import STTProvider
 from providers.ocr_provider import OCRProvider
 from providers.llm_provider import LLMProvider

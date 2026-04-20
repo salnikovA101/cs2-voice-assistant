@@ -6,10 +6,11 @@ from faster_qwen3_tts import FasterQwen3TTS
 from typing import Any, Dict
 import time
 import asyncio
+from tts.base import BaseTTSProvider
 
 logger = logging.getLogger(__name__)
 
-class TTSProvider:
+class QualityTTSProvider(BaseTTSProvider):
     def __init__(self, config: Dict[str, Any]) -> None:
         self.config: Dict[str, Any] = config["tts"]
         logger.info(f"Загрузка TTS {self.config['model']}...")
@@ -32,6 +33,9 @@ class TTSProvider:
             del self.model
             torch.cuda.empty_cache()
             logger.info("FasterQwen3TTS выгружена из VRAM")
+
+    def warmup(self) -> None:
+        self._voiceover_sync("Слушаю")
 
     def _voiceover_sync(self, text: str) -> None:
         start = time.perf_counter()
