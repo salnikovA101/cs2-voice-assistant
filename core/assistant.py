@@ -2,27 +2,24 @@ import asyncio
 import logging
 import cv2
 import numpy as np
-from core.prompt_loader import PromptLoader
 from tts.manager import TTSManager
 from providers.stt_provider import STTProvider
 from providers.ocr_provider import OCRProvider
-from providers.llm_provider import LLMProvider
+from llm.manager import LLMManager
 from utils.audio_recorder import AudioRecorder
 from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
 class Assistant:
-    def __init__(self, config: Dict[str, Any], tts_mode: str = "speed", prompt_folder: str = "prompts") -> None:
+    def __init__(self, config: Dict[str, Any], tts_mode: str = "speed") -> None:
         self.config: Dict[str, Any] = config
         self.stt = STTProvider(config)
         self.tts = TTSManager(config, tts_mode)
-        self.llm = LLMProvider(config)
+        self.llm = LLMManager(config)
         self.ocr = OCRProvider()
-        self.prompt_loader = PromptLoader(prompt_folder)
         self.recorder = AudioRecorder()
         self.tts_mode = tts_mode
-        self.prompt_name = config["llm"]["prompt_mode"]
     
     def _process_image(self, image_tensor: np.ndarray) -> bytes:
         image_bgr = cv2.cvtColor(image_tensor, cv2.COLOR_RGB2BGR)
@@ -48,11 +45,15 @@ class Assistant:
             return
 
         logger.info(f"Ты сказал: {text}")
-        
-        prompt = self.prompt_loader.get_prompt(self.prompt_name)
 
-        answer = await self.llm.generate_response(prompt, text, image_bytes)
+        answer = await self.llm.generate_response(
+            user_text=text,
+            image_bytes=image_bytes,
+        )
 
         logger.info(f"Ответ LLM: {answer}")
 
-        await self.tts.voiceover(answer, self.tts_mode)
+        await self.tts.voiceover(
+            text=answer,
+            mode=self.tts_mode
+        )
