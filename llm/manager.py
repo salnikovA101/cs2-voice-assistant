@@ -27,10 +27,10 @@ class LLMManager:
 
     async def generate_response(self, user_text: str, image_bytes: Optional[bytes] = None, model_name: Optional[LLMModelNames] = None) -> str:
         if model_name and model_name != self.model_name:
-            self.model.unload()
+            await self.model.unload()
             self.model_name = model_name
             self.model = self._load(model_name)
-            self.model.warmup()
+            await self.model.warmup()
         prompt = self.prompt_manager.get_prompt(self.current_prompt_name)
         history = self._get_history(self.model_name)
         text = await self.model.generate_response(
@@ -45,7 +45,6 @@ class LLMManager:
     def _load(self, name: LLMModelNames) -> BaseLLMProvider:
         model_class = self.MODELS.get(name, GeminiProvider)
         model = model_class(self.config)
-        model.warmup()
         return model
     
     def _get_history(self, name: LLMModelNames) -> List[Any]:

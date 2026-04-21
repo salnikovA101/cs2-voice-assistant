@@ -7,9 +7,9 @@ class BaseLLMProvider(ABC):
         pass
 
     @abstractmethod
-    def unload(self) -> None:
+    async def unload(self) -> None:
         pass
 
     @abstractmethod
-    def warmup(self) -> None:
+    async def warmup(self) -> None:
         pass
