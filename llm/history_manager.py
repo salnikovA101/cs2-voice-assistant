@@ -6,13 +6,14 @@ class HistoryManager:
         self.history: Deque[Dict[str, str]] = deque(maxlen=max_len)
 
     def add_entry(self, user_text: str, assistant_text: str) -> None:
-        self.history.append({"user": user_text, "assistant": assistant_text})
+        if user_text and user_text.strip() and assistant_text and assistant_text.strip():
+            self.history.append({"user": user_text, "assistant": assistant_text})
     
-    def get_gemini(self) -> List[Any]:
-        contents: List[str] = []
+    def get_gemini(self) -> List[Dict[str, Any]]:
+        contents: List[Dict[str, Any]] = []
         for entry in self.history:
-            contents.append(f"User: {entry["user"]}")
-            contents.append(f"Assistant: {entry["assistant"]}")
+            contents.append({"role": "user", "parts": [{"text": entry["user"]}]})
+            contents.append({"role": "model", "parts": [{"text": entry["assistant"]}]})
         return contents
 
     def get_ollama(self) -> List[Dict[str, str]]:
