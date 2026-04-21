@@ -2,17 +2,18 @@ import asyncio
 import logging
 import cv2
 import numpy as np
+from typing import Any, Dict
 from tts.manager import TTSManager
 from providers.stt_provider import STTProvider
 from providers.ocr_provider import OCRProvider
 from llm.manager import LLMManager
 from utils.audio_recorder import AudioRecorder
-from typing import Any, Dict
+from utils.constants import LLMModelNames, TTSModes
 
 logger = logging.getLogger(__name__)
 
 class Assistant:
-    def __init__(self, config: Dict[str, Any], tts_mode: str = "speed") -> None:
+    def __init__(self, config: Dict[str, Any], tts_mode: TTSModes = TTSModes.SPEED) -> None:
         self.config: Dict[str, Any] = config
         self.stt = STTProvider(config)
         self.tts = TTSManager(config, tts_mode)
