@@ -4,18 +4,28 @@ from llm.base import BaseLLMProvider
 from llm.providers.gemini_provider import GeminiProvider
 from llm.providers.ollama_provider import OllamaProvider
 from llm.prompt_loader import PromptLoader
+from utils.constants import LLMModelNames
 
 class LLMManager:
-    def __init__(self, config: Dict[str, Any], name: str = "gemini", history_size: int = 4, prompt_folder: str = "prompts", base_prompt_name: str = "smart") -> None:
+    MODELS: Dict[LLMModelNames, Any] = {
+        LLMModelNames.GEMINI: GeminiProvider,
+        LLMModelNames.OLLAMA: OllamaProvider
+    }
+
+    HISTORY: Dict[LLMModelNames, Any] = {
+        LLMModelNames.GEMINI: "get_gemini",
+        LLMModelNames.OLLAMA: "get_ollama"
+    }
+
+    def __init__(self, config: Dict[str, Any], name: LLMModelNames = LLMModelNames.GEMINI, history_size: int = 4, prompt_folder: str = "prompts", base_prompt_name: str = "smart") -> None:
         self.config = config
         self.model_name = name
         self.current_prompt_name = base_prompt_name
-        self.model: BaseLLMProvider = self._load(name)
-        self.history_manager = HistoryManager(history_size)
         self.prompt_manager = PromptLoader(prompt_folder)
-        
+        self.history_manager = HistoryManager(history_size)
+        self.model: BaseLLMProvider = self._load(name)
 
-    async def generate_response(self, user_text: str, image_bytes: Optional[bytes] = None, model_name: Optional[str] = None) -> str:
+    async def generate_response(self, user_text: str, image_bytes: Optional[bytes] = None, model_name: Optional[LLMModelNames] = None) -> str:
         if model_name and model_name != self.model_name:
             self.model.unload()
             self.model_name = model_name
@@ -32,21 +42,14 @@ class LLMManager:
         self.history_manager.add_entry(user_text, text)
         return text
 
-    def _load(self, name: str) -> BaseLLMProvider:
-        MODELS = {
-            "gemini": GeminiProvider,
-            "ollama": OllamaProvider
-        }
-        model_class = MODELS.get(name, GeminiProvider)
+    def _load(self, name: LLMModelNames) -> BaseLLMProvider:
+        model_class = self.MODELS.get(name, GeminiProvider)
         model = model_class(self.config)
         model.warmup()
         return model
     
-    def _get_history(self, name: str) -> List[Any]:
-        HISTORY = {
-            "gemini": self.history_manager.get_gemini,
-            "ollama": self.history_manager.get_ollama
-        }
-        history_type = HISTORY.get(name, self.history_manager.get_gemini)
+    def _get_history(self, name: LLMModelNames) -> List[Any]:
+        method_name = self.HISTORY.get(name, "get_gemini")
+        history_type = getattr(self.history_manager, method_name)
         return history_type()
     
