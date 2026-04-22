@@ -3,19 +3,19 @@ import time
 import asyncio
 import numpy as np
 import logging
-from typing import Any, Dict
 import numpy.typing as npt
+from utils.config import SttConfig
 
 logger = logging.getLogger(__name__)
 
 class STTProvider:
-    def __init__(self, config: Dict[str, Any]) -> None:
-        self.config: Dict[str, Any] = config["stt"]
-        logger.info(f"Загрузка Whisper {self.config['model']} на {self.config['device']}...")
+    def __init__(self, config: SttConfig) -> None:
+        self.config: SttConfig = config
+        logger.info(f"Загрузка Whisper {self.config.model} на {self.config.device}...")
         self.model = WhisperModel(
-            self.config["model"],
-            device=self.config["device"],
-            compute_type=self.config["compute_type"],
+            self.config.model,
+            device=self.config.device,
+            compute_type=self.config.compute_type
         )
         self._warmup()
         logger.info("Whisper готов")

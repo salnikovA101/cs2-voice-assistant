@@ -3,9 +3,9 @@ import yaml
 import os
 import logging
 from typing import Any, Dict
-from dotenv import load_dotenv
 
 from core.assistant import Assistant
+from utils.config import AppConfig
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,17 +14,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
 async def main() -> None:
-    with open("config.yaml", encoding="utf-8") as file:
-        config: Dict[str, Any] = yaml.safe_load(file)
-    
-    config["llm"]["api_key"] = os.getenv("API_KEY")
+    config: AppConfig = AppConfig.load("config.yaml")
     assistant = Assistant(config)
-    
     logger.info("CS2 Voice Assistant готов!")
-    ptt_key = config["general"]["push_to_talk_key"]
+    ptt_key = config.general.push_to_talk_key
 
     while True:
         logger.info(f"Удерживай '{ptt_key}' и говори")

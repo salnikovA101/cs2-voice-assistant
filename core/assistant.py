@@ -2,25 +2,23 @@ import asyncio
 import logging
 import cv2
 import numpy as np
-from typing import Any, Dict
 from tts.manager import TTSManager
 from providers.stt_provider import STTProvider
 from providers.ocr_provider import OCRProvider
 from llm.manager import LLMManager
 from utils.audio_recorder import AudioRecorder
 from utils.constants import LLMModelNames, TTSModes
+from utils.config import AppConfig
 
 logger = logging.getLogger(__name__)
 
 class Assistant:
-    def __init__(self, config: Dict[str, Any], tts_mode: TTSModes = TTSModes.SPEED) -> None:
-        self.config: Dict[str, Any] = config
-        self.stt = STTProvider(config)
-        self.tts = TTSManager(config, tts_mode)
-        self.llm = LLMManager(config)
+    def __init__(self, config: AppConfig) -> None:
+        self.recorder = AudioRecorder(config.general)
+        self.stt = STTProvider(config.stt)
+        self.llm = LLMManager(config.llm)
+        self.tts = TTSManager(config.tts)
         self.ocr = OCRProvider()
-        self.recorder = AudioRecorder()
-        self.tts_mode = tts_mode
     
     def _process_image(self, image_tensor: np.ndarray) -> bytes:
         image_bgr = cv2.cvtColor(image_tensor, cv2.COLOR_RGB2BGR)
@@ -28,9 +26,8 @@ class Assistant:
         return buffer.tobytes()
 
     async def run_pipeline(self) -> None:
-        key: str = self.config["general"]["push_to_talk_key"]
         audio_data, image_tensor = await asyncio.gather(
-            self.recorder.record(key),
+            self.recorder.record(),
             self.ocr.get_screen()
         )
 
@@ -50,11 +47,12 @@ class Assistant:
         answer = await self.llm.generate_response(
             user_text=text,
             image_bytes=image_bytes,
+            model_name=LLMModelNames.GEMINI
         )
 
         logger.info(f"Ответ LLM: {answer}")
 
         await self.tts.voiceover(
             text=answer,
-            mode=self.tts_mode
+            mode=TTSModes.SPEED
         )
