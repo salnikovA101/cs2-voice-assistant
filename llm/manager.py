@@ -20,15 +20,16 @@ class LLMManager:
 
     def __init__(self, config: LlmConfig) -> None:
         self.config = config
+        self.loaded_model = config.current_model
         self.prompt_manager = PromptLoader(config.prompt_folder)
         self.history_manager = HistoryManager(config.history_len)
         self.model: BaseLLMProvider = self._load(config.current_model)
 
-    async def generate_response(self, user_text: str, image_bytes: Optional[bytes] = None, model_name: Optional[LLMModelNames] = None) -> str:
-        if model_name and model_name != self.config.current_model:
+    async def generate_response(self, user_text: str, image_bytes: Optional[bytes] = None) -> str:
+        if self.loaded_model != self.config.current_model:
             await self.model.unload()
-            self.config.current_model = model_name
-            self.model = self._load(model_name)
+            self.loaded_model = self.config.current_model
+            self.model = self._load(self.config.current_model)
             await self.model.warmup()
         prompt = self.prompt_manager.get_prompt(self.config.prompt_mode)
         history = self._get_history(self.config.current_model)
@@ -40,6 +41,9 @@ class LLMManager:
         )
         self.history_manager.add_entry(user_text, text)
         return text
+
+    async def unload(self) -> None:
+        await self.model.unload()
 
     def _load(self, name: LLMModelNames) -> BaseLLMProvider:
         model_class = self.MODELS.get(name, GeminiProvider)

@@ -13,13 +13,14 @@ class TTSManager:
 
     def __init__(self, config: TtsConfig) -> None:
         self.config = config
+        self.loaded_mode = config.mode
         self.model: BaseTTSProvider = self._load_model(self.config.mode)
     
-    async def voiceover(self, text: str, mode: Optional[TTSModes] = None) -> None:
-        if mode and mode != self.config.mode:
+    async def voiceover(self, text: str) -> None:
+        if self.loaded_mode != self.config.mode:
             self._unload()
-            self.model = self._load_model(mode)
-            self.config.mode = mode
+            self.loaded_mode = self.config.mode
+            self.model = self._load_model(self.config.mode)
         await self.model.voiceover(text)
 
     def _load_model(self, mode: TTSModes) -> BaseTTSProvider:
