@@ -23,5 +23,5 @@ class OCRProvider:
         frame = self.camera.grab()
         while frame is None:
             frame = self.camera.grab()
-        logger.debug("OCR: сделал снимок")
+        logger.info("OCR: сделал снимок")
         return frame

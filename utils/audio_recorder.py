@@ -16,16 +16,16 @@ class AudioRecorder:
         self.recording: bool = False
         self.chunks: List[np.ndarray] = []
 
+    async def wait_for_press(self) -> None:
+        while not keyboard.is_pressed(self.ptt_key):
+            await asyncio.sleep(0.01)
+
     def _callback(self, indata: np.ndarray, frames, time_info, status):
         if self.recording:
             self.chunks.append(indata.copy())
 
     async def record(self) -> npt.NDArray[np.float32]:
         self.chunks.clear()
-        self.recording = False
-
-        while not keyboard.is_pressed(self.ptt_key):
-            await asyncio.sleep(0.01)
 
         logger.info(f"Отпусти '{self.ptt_key}', чтобы закончить")
         self.recording = True

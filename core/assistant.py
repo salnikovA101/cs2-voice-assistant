@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Assistant:
     def __init__(self, config: AppConfig) -> None:
+        self.config = config
         self.recorder = AudioRecorder(config.general)
         self.stt = STTProvider(config.stt)
         self.llm = LLMManager(config.llm)
@@ -26,10 +27,11 @@ class Assistant:
         return buffer.tobytes()
 
     async def run_pipeline(self) -> None:
-        audio_data, image_tensor = await asyncio.gather(
-            self.recorder.record(),
-            self.ocr.get_screen()
-        )
+        await self.recorder.wait_for_press()
+
+        image_tensor = await self.ocr.get_screen()
+
+        audio_data = await self.recorder.record()
 
         if len(audio_data) == 0:
             return
@@ -46,13 +48,11 @@ class Assistant:
 
         answer = await self.llm.generate_response(
             user_text=text,
-            image_bytes=image_bytes,
-            model_name=LLMModelNames.GEMINI
+            image_bytes=image_bytes
         )
 
         logger.info(f"Ответ LLM: {answer}")
 
         await self.tts.voiceover(
-            text=answer,
-            mode=TTSModes.SPEED
+            text=answer
         )
