@@ -1,6 +1,6 @@
 general:
   push_to_talk_key: "right ctrl"
-  debug_mode: True
+  debug_mode: False
 
 stt: #~1,1гб VRAM
   model: "large-v3-turbo"
