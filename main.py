@@ -6,12 +6,19 @@ from utils.config import AppConfig
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
+
 async def main() -> None:
+    """
+    Основная точка входа в приложение.
+
+    Загружает конфигурацию, настраивает уровень логирования и запускает
+    бесконечный цикл обработки голосовых команд.
+    """
     config: AppConfig = AppConfig.load("config.yaml")
     if config.general.debug_mode:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -26,6 +33,7 @@ async def main() -> None:
         logger.info(f"Удерживай '{ptt_key}' и говори")
         await assistant.run_pipeline()
         await asyncio.sleep(0.01)
+
 
 if __name__ == "__main__":
     try:
