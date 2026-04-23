@@ -1,20 +1,36 @@
 import asyncio
-import yaml
-from typing import Any, Dict
+import logging
 
 from core.assistant import Assistant
+from utils.config import AppConfig
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
 
 async def main() -> None:
-    with open("config.yaml", encoding="utf-8") as file:
-        config: Dict[str, Any] = yaml.safe_load(file)
-    
+    """
+    Основная точка входа в приложение.
+
+    Загружает конфигурацию, настраивает уровень логирования и запускает
+    бесконечный цикл обработки голосовых команд.
+    """
+    config: AppConfig = AppConfig.load("config.yaml")
+    if config.general.debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("faster_whisper").setLevel(logging.WARNING)
     assistant = Assistant(config)
-    
-    print("CS2 Voice Assistant готов!")
-    ptt_key = config["general"]["push_to_talk_key"]
+    logger.info("Voice Assistant готов!")
+    ptt_key = config.general.push_to_talk_key
 
     while True:
-        print(f"Удерживай '{ptt_key}' и говори")
+        logger.info(f"Удерживай '{ptt_key}' и говори")
         await assistant.run_pipeline()
         await asyncio.sleep(0.01)
 
@@ -23,6 +39,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Bye")
+        logger.info("Bye")
     except Exception as e:
-        print(f"Критическая ошибка: {e}")
+        logger.error(f"Критическая ошибка: {e}")
