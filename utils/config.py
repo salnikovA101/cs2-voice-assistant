@@ -10,6 +10,7 @@ from utils.constants import TTSModes, LLMModelNames
 class GeneralConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
     push_to_talk_key: str = "right ctrl"
+    debug_mode: bool = False
 
 class SttConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -53,9 +54,9 @@ class OllamaConfig(BaseModel):
     model: str = "qwen3.5:0.8b" 
     host: str = "http://127.0.0.1:11434"
     think: bool = True
-    temperature: float = 1.0
+    temperature: float = 0.6
     max_output_tokens: int = 4000
-    num_ctx: int = 4096
+    num_ctx: int = 8192
 
 class TtsConfig(BaseModel):
     mode: TTSModes = TTSModes.SPEED

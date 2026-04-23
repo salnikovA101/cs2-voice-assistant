@@ -1,5 +1,6 @@
 general:
   push_to_talk_key: "right ctrl"
+  debug_mode: True
 
 stt: #~1,1гб VRAM
   model: "large-v3-turbo"
@@ -23,23 +24,24 @@ tts: #~2,4гб VRAM
     attn_implementation: "sdpa"
     max_seq_len: 2048
     ref_voice: "voices/example.wav"
-    ref_text: ""
+    ref_text: "Буду, получается, проходить сюжетку Пылью, Женщиной-пауком, ну или какими-нибудь другими супергероями. И, в общем-то, надеюсь, всё получится. Погнали!"
     language: "Russian"
     chunk_size: 4
 
 llm: #~0гб VRAM
-  current_model: "gemini"
+  current_model: "ollama"
   history_len: 4
-  prompt_mode: "humor" # humor or smart
+  prompt_mode: "smart" # humor or smart
   
   gemini:
-    model: "gemma-4-26b-a4b-it"
+    model: "gemma-4-31b-it"
     temperature: 1.0
     max_output_tokens: 4000
   
   ollama:
+    model: "qwen3.5:4b"
     host: "http://127.0.0.1:11434"
-    model: "qwen3.5:0.8b"
-    think: true
-    temperature: 1.0
-    max_output_tokens: 4000
+    think: False
+    temperature: 0.6
+    max_output_tokens: 512
+    num_ctx: 8192

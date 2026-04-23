@@ -1,8 +1,5 @@
 import asyncio
-import yaml
-import os
 import logging
-from typing import Any, Dict
 
 from core.assistant import Assistant
 from utils.config import AppConfig
@@ -16,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 async def main() -> None:
     config: AppConfig = AppConfig.load("config.yaml")
+    if config.general.debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
     assistant = Assistant(config)
     logger.info("CS2 Voice Assistant готов!")
     ptt_key = config.general.push_to_talk_key
