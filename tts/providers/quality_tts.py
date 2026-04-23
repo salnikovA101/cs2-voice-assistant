@@ -21,7 +21,7 @@ class QualityTTSProvider(BaseTTSProvider):
             max_seq_len=self.config.max_seq_len,
             dtype=torch.bfloat16
         )
-        logger.info("TTS готов")
+        logger.info("QwenTTS готов")
 
     async def voiceover(self, text: str) -> None:
         if not text:
@@ -32,7 +32,7 @@ class QualityTTSProvider(BaseTTSProvider):
         if hasattr(self, "model"):
             del self.model
             torch.cuda.empty_cache()
-            logger.info("FasterQwen3TTS выгружена из VRAM")
+            logger.debug("FasterQwen3TTS выгружена из VRAM")
 
     def warmup(self) -> None:
         self._voiceover_sync("Слушаю")
@@ -52,5 +52,5 @@ class QualityTTSProvider(BaseTTSProvider):
                 stream.write(np.asarray(audio_chunk, dtype=np.float32).reshape(-1, 1))
 
                 if first_chunk:
-                    logger.info(f"TTS: {time.perf_counter() - start:.2f} сек")
+                    logger.debug(f"TTS: {time.perf_counter() - start:.2f} сек")
                     first_chunk = False

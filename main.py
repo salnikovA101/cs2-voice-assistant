@@ -15,8 +15,11 @@ async def main() -> None:
     config: AppConfig = AppConfig.load("config.yaml")
     if config.general.debug_mode:
         logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("faster_whisper").setLevel(logging.WARNING)
     assistant = Assistant(config)
-    logger.info("CS2 Voice Assistant готов!")
+    logger.info("Voice Assistant готов!")
     ptt_key = config.general.push_to_talk_key
 
     while True:

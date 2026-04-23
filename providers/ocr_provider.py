@@ -14,7 +14,7 @@ class OCRProvider:
             logger.error(f"Ошибка инициализации DXcam: {e}")
             raise RuntimeError("DXcam недоступен.")
             
-        logger.info("OCR (Screen Capture) готов")
+        logger.info("DXcam готов")
 
     async def get_screen(self) -> np.ndarray:
         return await asyncio.to_thread(self._get_screen_sync)
@@ -23,5 +23,5 @@ class OCRProvider:
         frame = self.camera.grab()
         while frame is None:
             frame = self.camera.grab()
-        logger.info("OCR: сделал снимок")
+        logger.debug("OCR: сделал снимок")
         return frame

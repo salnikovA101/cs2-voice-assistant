@@ -21,7 +21,7 @@ class STTProvider:
         logger.info("Whisper готов")
 
     def _warmup(self) -> None:
-        logger.info("Прогрев STT модели...")
+        logger.debug("Прогрев STT модели...")
         start = time.perf_counter()
         dummy_audio = np.zeros(16000, dtype=np.float32)
         self.model.transcribe(
@@ -29,7 +29,7 @@ class STTProvider:
             beam_size=5,
             language="ru"
         )
-        logger.info(f"Прогрев STT завершен за {time.perf_counter() - start:.3f} сек")
+        logger.debug(f"Прогрев STT завершен за {time.perf_counter() - start:.3f} сек")
 
     async def transcribe(self, audio: npt.NDArray[np.float32]) -> str:
         if len(audio) == 0:
@@ -37,7 +37,7 @@ class STTProvider:
 
         start = time.perf_counter()
         text = await asyncio.to_thread(self._transcribe_sync, audio)
-        logger.info(f"STT: {time.perf_counter() - start:.3f} сек")
+        logger.debug(f"STT: {time.perf_counter() - start:.3f} сек")
         return text.strip()
 
     def _transcribe_sync(self, audio: npt.NDArray[np.float32]) -> str:

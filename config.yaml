@@ -9,7 +9,7 @@ stt: #~1,1гб VRAM
   language: "ru"
 
 tts: #~2,4гб VRAM
-  mode: "speed" # "quality" - Qwen3 или "speed" - Silero v5
+  mode: "quality" # "quality" - Qwen3 или "speed" - Silero v5
 
   speed:
     silero_speaker: "baya"
@@ -42,6 +42,6 @@ llm: #~0гб VRAM
     model: "qwen3.5:4b"
     host: "http://127.0.0.1:11434"
     think: False
-    temperature: 0.6
+    temperature: 0.3
     max_output_tokens: 512
     num_ctx: 8192

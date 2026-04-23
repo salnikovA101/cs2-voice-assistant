@@ -18,7 +18,7 @@ class FastTTSProvider(BaseTTSProvider):
         logger.info("Загрузка Silero TTS V5...")
         self.model, _ = silero_tts(language=self.config.language, speaker=self.config.speaker_type)
         self.model.to(self.device)
-        logger.info(f"Fast TTS готов. Спикер: {self.config.speaker_name}")
+        logger.info(f"Silero TTS готов. Спикер: {self.config.speaker_name}")
 
     async def voiceover(self, text: str) -> None:
         if not text:
@@ -29,7 +29,7 @@ class FastTTSProvider(BaseTTSProvider):
         if hasattr(self, "model"):
             del self.model
             torch.cuda.empty_cache()
-            logger.info("Silero TTS выгружена из VRAM")
+            logger.debug("Silero TTS выгружена из VRAM")
 
     def warmup(self) -> None:
         self._voiceover_sync("Слушаю")
@@ -41,7 +41,7 @@ class FastTTSProvider(BaseTTSProvider):
             speaker=self.config.speaker_name,
             sample_rate=self.config.sample_rate
         )
-        logger.info(f"Сгенерировано за {time.perf_counter() - start:.3f} сек")
+        logger.debug(f"Сгенерировано за {time.perf_counter() - start:.3f} сек")
         audio_np = audio.cpu().numpy()
 
         sd.play(audio_np, self.config.sample_rate)
