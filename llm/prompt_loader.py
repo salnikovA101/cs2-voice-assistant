@@ -26,7 +26,7 @@ class PromptLoader:
     def get_prompt(self, name: str) -> str:
         prompt = self.prompts.get(name, "")
         format = self.prompts.get("response_format", "")
-        return prompt + "\n" + format
+        return prompt + "\n\n" + format
 
     def update_folder(self, folder_name: str) -> None:
         self.clear()

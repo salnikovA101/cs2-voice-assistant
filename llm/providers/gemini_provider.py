@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Callable, Dict
 from google import genai
 from google.genai.types import GenerateContentConfig, Part, Content
 from llm.base import BaseLLMProvider
@@ -14,7 +14,15 @@ class GeminiProvider(BaseLLMProvider):
         self.client = genai.Client(api_key=self.config.api_key)
         logger.info(f"Gemini {self.config.model} готов")
 
-    async def generate_response(self, user_text: str, image_bytes: Optional[bytes] = None, prompt: str = "", history: Optional[List[Any]] = None) -> str:
+    async def generate_response(
+        self,
+        user_text: str,
+        image_bytes: Optional[bytes] = None,
+        prompt: str = "",
+        history: Optional[List[Any]] = None,
+        tools: Optional[List[Callable]] = None,
+        tool_map: Optional[Dict[str, Callable]] = None
+    ) -> str:
         try:
             start = time.perf_counter()
             config = GenerateContentConfig(
@@ -38,8 +46,9 @@ class GeminiProvider(BaseLLMProvider):
                 contents=contents, # pyright: ignore[reportArgumentType]
                 config=config
             )
+            logger.debug(response)
             text = response.text or "Gemini вернул пустой ответ."
-            logger.info(f"LLM: Gemini ответил за {time.perf_counter() - start:.2f} сек")
+            logger.debug(f"LLM: Gemini ответил за {time.perf_counter() - start:.2f} сек")
             return text.strip()
 
         except Exception as e:
