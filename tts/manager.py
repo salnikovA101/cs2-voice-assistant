@@ -43,7 +43,7 @@ class TTSManager:
             text (str): Текст, который необходимо преобразовать в речь.
         """
         if self.loaded_mode != self.config.mode:
-            self._unload()
+            self.unload()
             self.loaded_mode = self.config.mode
             self.model = self._load_model(self.config.mode)
         await self.model.voiceover(text)
@@ -63,7 +63,7 @@ class TTSManager:
         model.warmup()
         return model
 
-    def _unload(self) -> None:
+    def unload(self) -> None:
         """
         Освобождает ресурсы текущей загруженной модели.
 

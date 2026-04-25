@@ -56,3 +56,14 @@ class OCRProvider:
             frame = self.camera.grab()
         logger.debug("OCR: сделал снимок")
         return frame
+    
+    def release(self) -> None:
+        """
+        Освобождает DXcam и DirectX ресурсы.
+        """
+        try:
+            if hasattr(self, "camera") and self.camera:
+                self.camera.release()
+                logger.debug("DXcam освобождён")
+        except Exception as e:
+            logger.error(f"Ошибка при освобождении DXcam: {e}")

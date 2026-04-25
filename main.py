@@ -23,15 +23,31 @@ async def main() -> None:
     if config.general.debug_mode:
         logging.getLogger().setLevel(logging.DEBUG)
     else:
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        logging.getLogger("faster_whisper").setLevel(logging.WARNING)
+        quiet_loggers = [
+            "httpx",
+            "faster_whisper",
+            "faster_qwen3_tts",
+            "qwen_tts",
+            "huggingface_hub"
+        ]
+        for log in quiet_loggers:
+            logging.getLogger(log).setLevel(logging.ERROR)
+
     assistant = Assistant(config)
     logger.info("Voice Assistant готов!")
     ptt_key = config.general.push_to_talk_key
 
-    while True:
-        logger.info(f"Удерживай '{ptt_key}' и говори")
-        await assistant.run_pipeline()
+    try:
+        while True:
+            logger.info(f"Удерживай '{ptt_key}' и говори")
+            try:
+                await assistant.run_pipeline()
+            except Exception as e:
+                logger.error(f"Ошибка в pipeline: {e}", exc_info=True)
+                await asyncio.sleep(1)
+    finally:
+        logger.info("Завершение работы...")
+        await assistant.shutdown()
 
 
 if __name__ == "__main__":
@@ -40,4 +56,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Bye")
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
+        logger.error(f"Критическая ошибка: {e}", exc_info=True)

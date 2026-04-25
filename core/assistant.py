@@ -59,28 +59,49 @@ class Assistant:
         распознавание, генерация ответа и озвучка.
         """
         await self.recorder.wait_for_press()
-
         image_tensor = await self.ocr.get_screen()
-
         audio_data = await self.recorder.record()
 
         if len(audio_data) == 0:
             return
 
-        text, image_bytes = await asyncio.gather(
-            self.stt.transcribe(audio_data),
-            asyncio.to_thread(self._process_image, image_tensor),
-        )
+        try:
+            text, image_bytes = await asyncio.wait_for(
+                asyncio.gather(
+                    self.stt.transcribe(audio_data),
+                    asyncio.to_thread(self._process_image, image_tensor),
+                ),
+                timeout=30
+            )
+        except asyncio.TimeoutError:
+            logger.error("STT/image_process завис, пропуск иттерации")
+            return
 
         if not text:
             return
 
         logger.info(f"Ты сказал: {text}")
 
-        answer = await self.llm.generate_response(
-            user_text=text, image_bytes=image_bytes
-        )
+        try:
+            answer = await asyncio.wait_for(
+                self.llm.generate_response(user_text=text, image_bytes=image_bytes),
+                timeout=60
+            )
+        except asyncio.TimeoutError:
+            answer = "LLM не смог ответить за 60 сек"
+            logger.error(answer)
+            await self.tts.voiceover(text=answer)
+            return
 
         logger.info(f"Ответ LLM: {answer}")
-
         await self.tts.voiceover(text=answer)
+    
+    async def shutdown(self) -> None:
+        """
+        Завершение: выгружает все модели.
+        """
+        await self.llm.unload()
+        self.tts.unload()
+        self.ocr.release()
+        logger.info("Ресурсы освобождены")
+
