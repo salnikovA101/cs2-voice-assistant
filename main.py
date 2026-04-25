@@ -32,7 +32,6 @@ async def main() -> None:
     while True:
         logger.info(f"Удерживай '{ptt_key}' и говори")
         await assistant.run_pipeline()
-        await asyncio.sleep(0.01)
 
 
 if __name__ == "__main__":
