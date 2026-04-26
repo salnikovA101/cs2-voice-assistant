@@ -1,3 +1,4 @@
+import asyncio
 import time
 import logging
 from typing import Any, Dict, List, Optional, Callable
@@ -75,7 +76,7 @@ class OllamaProvider(BaseLLMProvider):
                     "num_ctx": self.config.num_ctx,
                 },
             )
-            max_turns = 5
+            max_turns = self.config.max_turns
             turns = 0
             logger.debug(response)
             while response.message.tool_calls and turns < max_turns:
@@ -89,7 +90,7 @@ class OllamaProvider(BaseLLMProvider):
 
                     if function_to_call:
                         logger.debug(f"Вызов функции {name}, аргументы: {args}")
-                        result = function_to_call(**args)
+                        result = await asyncio.to_thread(function_to_call, **args)
                         messages.append({"role": "tool", "content": str(result)})
                     else:
                         logger.error(f"Ошибка функции {name} не существует")

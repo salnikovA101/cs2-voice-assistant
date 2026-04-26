@@ -105,6 +105,7 @@ class GeminiConfig(BaseModel):
     api_key: Optional[str] = None
     temperature: float = 1.0
     max_output_tokens: int = 4000
+    max_turns: int = 5
     thinking_config: ThinkingConfig = Field(
         default_factory=lambda: ThinkingConfig(thinking_level=ThinkingLevel.HIGH)
     )
@@ -130,6 +131,7 @@ class OllamaConfig(BaseModel):
     temperature: float = 0.6
     max_output_tokens: int = 4000
     num_ctx: int = 8192
+    max_turns: int = 5
 
 
 class TtsConfig(BaseModel):
