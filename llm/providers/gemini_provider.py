@@ -1,3 +1,4 @@
+import asyncio
 import time
 import logging
 from typing import Any, List, Optional, Callable, Dict
@@ -62,6 +63,7 @@ class GeminiProvider(BaseLLMProvider):
                 temperature=self.config.temperature,
                 max_output_tokens=self.config.max_output_tokens,
                 thinking_config=self.config.thinking_config,
+                tools=tools
             )
             contents: List[Content] = []
             if history:
@@ -79,6 +81,47 @@ class GeminiProvider(BaseLLMProvider):
                 config=config,
             )
             logger.debug(response)
+
+            max_turns = self.config.max_turns
+            turns = 0
+            while response.function_calls and turns < max_turns:
+                turns += 1
+                logger.debug("Gemini использует инструменты...")
+                if response.candidates and response.candidates[0].content:
+                    contents.append(response.candidates[0].content)
+                func_response_parts: List[Part] = []
+                for call in response.function_calls:
+                    name = call.name
+                    if name:
+                        args = call.args or {}
+                        function_to_call = tool_map.get(name) if tool_map else None
+
+                        if function_to_call:
+                            logger.debug(f"Вызов функции {name}, аргументы: {args}")
+                            try:
+                                result = await asyncio.to_thread(function_to_call, **args)
+                            except Exception as e:
+                                logger.error(f"Ошибка при выполнении {name}: {e}")
+                                result = f"Error: {e}"
+                        else:
+                            logger.error(f"Ошибка: функции {name} не существует")
+                            result = f"Error: function {name} not found."
+
+                        func_response_parts.append(
+                            Part.from_function_response(
+                                name=name,
+                                response={"result": str(result)}
+                            )
+                        )
+
+                contents.append(Content(role="user", parts=func_response_parts))
+
+                response = await self.client.aio.models.generate_content(
+                    model=self.config.model,
+                    contents=contents,  # pyright: ignore[reportArgumentType]
+                    config=config,
+                )
+                logger.debug(response)
             text = response.text or "Gemini вернул пустой ответ."
             logger.debug(
                 f"LLM: Gemini ответил за {time.perf_counter() - start:.2f} сек"
