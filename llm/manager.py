@@ -1,122 +1,129 @@
 import logging
-from typing import Any, Dict, List, Optional
-from llm.history_manager import HistoryManager
+from datetime import datetime
+from typing import Optional, Tuple
+
 from llm.base import BaseLLMProvider
-from llm.providers.gemini_provider import GeminiProvider
-from llm.providers.ollama_provider import OllamaProvider
+from llm.history_manager import HistoryManager
 from llm.prompt_loader import PromptLoader
-from tools.registry import Tools
-from utils.constants import LLMModelNames
-from utils.config import LlmConfig
+from llm.providers.lm_studio_provider import LMStudioProvider
+from llm.providers.ollama_provider import OllamaProvider
+from llm.providers.openai_provider import OpenAIProvider
+from tools.registry import ToolRegistry
+from utils.constants import LLMProviderType
+from utils.config import AppConfig
 
 logger = logging.getLogger(__name__)
+
+_PROVIDER_MAP: dict[LLMProviderType, type[BaseLLMProvider]] = {
+    LLMProviderType.OPENAI: OpenAIProvider,
+    LLMProviderType.OLLAMA: OllamaProvider,
+    LLMProviderType.LM_STUDIO: LMStudioProvider,
+}
 
 
 class LLMManager:
     """
-    Менеджер для переключения между различными LLM провайдерами и управления контекстом.
+    Менеджер для работы с LLM провайдером.
 
-    Реализует динамическую смену моделей (например, с Ollama на Gemini)
-    и интеграцию инструментов (tools).
+    Инициализирует нужный провайдер по полю `current_profile` из конфига (LlmConfig).
+    Делегирует вызовы generate_response, unload и warmup активному провайдеру.
     """
 
-    MODELS: Dict[LLMModelNames, Any] = {
-        LLMModelNames.GEMINI: GeminiProvider,
-        LLMModelNames.OLLAMA: OllamaProvider,
-    }
-
-    HISTORY: Dict[LLMModelNames, Any] = {
-        LLMModelNames.GEMINI: "get_gemini",
-        LLMModelNames.OLLAMA: "get_ollama",
-    }
-
-    def __init__(self, config: LlmConfig) -> None:
+    def __init__(self, config: AppConfig) -> None:
         """
-        Инициализирует менеджер LLM, загружает конфигурацию, промпты и инструменты.
+        Инициализирует менеджер LLM, промпты, историю и реестр инструментов.
 
         Args:
-            config (LlmConfig): Объект конфигурации с настройками моделей.
+            config (AppConfig): Полная конфигурация приложения.
         """
-        self.config = config
-        self.loaded_model = config.current_model
-        self.prompt_manager = PromptLoader(config.prompt_folder)
-        self.history_manager = HistoryManager(config.history_len)
-        self.tools = Tools(switch_model_callback=self._switch_to_game_mode)
-        self.model: BaseLLMProvider = self._load(config.current_model)
+        self.config = config.llm
+        self.loaded_profile = self.config.current_profile
+        self.prompt_manager = PromptLoader(self.config.prompt_folder, config.tts.mode)
+        self.history_manager = HistoryManager(self.config.history_len)
+        self.tools = ToolRegistry(switch_model_callback=self._switch_to_game_mode)
+        self.model: BaseLLMProvider = self._load(self.loaded_profile)
 
     def _switch_to_game_mode(self):
         """
-        Callback-метод для принудительного переключения текущей модели на Gemini.
+        Callback-метод для принудительного переключения текущей модели на профиль gemini.
         Вызывается через инструменты (tools).
         """
-        self.config.current_model = LLMModelNames.GEMINI
+        logger.info(f"Переключение в игровой режим (профиль: {self.config.game_mode})")
+        self.config.current_profile = self.config.game_mode
 
     async def generate_response(
         self, user_text: str, image_bytes: Optional[bytes] = None
-    ) -> str:
+    ) -> Tuple[str, Optional[str]]:
         """
-        Генерирует ответ от LLM, учитывая контекст, промпты и доступные инструменты.
-
-        Если в процессе работы `self.config.current_model` изменился, метод
-        автоматически выгружает старую модель и инициализирует новую.
+        Основной метод генерации ответа. Обрабатывает смену профилей,
+        подготовку промпта и истории, а также вызов инструментов.
 
         Args:
-            user_text (str): Текстовый запрос пользователя.
-            image_bytes (Optional[bytes]): Бинарные данные изображения (если есть).
+            user_text (str): Текст запроса пользователя.
+            image_bytes (bytes, optional): Данные изображения в байтах.
 
         Returns:
-            str: Текстовый ответ, сгенерированный моделью.
+            Tuple[str, Optional[str]]: Очищенный текст и тег инструкции.
         """
-        if self.loaded_model != self.config.current_model:
+        if self.loaded_profile != self.config.current_profile:
             await self.model.unload()
-            self.loaded_model = self.config.current_model
-            self.model = self._load(self.config.current_model)
+            self.loaded_profile = self.config.current_profile
+            self.model = self._load(self.loaded_profile)
             await self.model.warmup()
-        prompt = self.prompt_manager.get_prompt(self.config.prompt_mode)
-        history = self._get_history(self.config.current_model)
+
+        prompt = self.prompt_manager.get_system_prompt()
+        now = datetime.now().strftime("%d.%m.%Y %H:%M")
+        prompt = prompt.replace("{current_datetime}", now)
+        history = self.history_manager.get_history()
         logger.debug(prompt)
         logger.debug(history)
-        text = await self.model.generate_response(
+
+        clean_text, instruct = await self.model.generate_response(
             user_text=user_text,
             image_bytes=image_bytes,
             prompt=prompt,
             history=history,
-            tools=self.tools.get_tools_list(),
+            tools=self.tools.get_openai_tools(),
             tool_map=self.tools.get_tool_map(),
         )
-        self.history_manager.add_entry(user_text, text)
-        return text
+        history_text = (
+            f"<instruct>{instruct}</instruct>\n{clean_text}" if instruct else clean_text
+        )
+        self.history_manager.add_entry(user_text, history_text)
+        return clean_text, instruct
 
     async def unload(self) -> None:
-        """
-        Освобождает ресурсы текущей активной модели.
-        """
+        """Выгружает текущую модель из памяти."""
         await self.model.unload()
 
-    def _load(self, name: LLMModelNames) -> BaseLLMProvider:
+    async def warmup(self) -> None:
+        """Прогревает текущую модель для ускорения первого ответа."""
+        await self.model.warmup()
+
+    def _load(self, name: str) -> BaseLLMProvider:
         """
-        Инстанцирует провайдера LLM на основе переданного имени.
+        Загружает конкретный экземпляр провайдера по имени профиля.
 
         Args:
-            name (LLMModelNames): Название модели для загрузки.
+            name (str): Имя профиля из конфигурации.
 
         Returns:
-            BaseLLMProvider: Экземпляр класса провайдера.
+            BaseLLMProvider: Инициализированный провайдер.
         """
-        model_class = self.MODELS.get(name, GeminiProvider)
-        model = model_class(self.config)
-        return model
+        profile = getattr(self.config.profiles, name, None)
+        if not profile:
+            raise ValueError(f"Профиль LLM '{name}' не найден в конфигурации")
 
-    def _get_history(self, name: LLMModelNames) -> List[Any]:
-        """
-        Получает историю диалога, отформатированную под конкретного провайдера.
+        cls = _PROVIDER_MAP.get(profile.provider)
+        if cls is None:
+            raise ValueError(
+                f"Неизвестный провайдер '{profile.provider}'. "
+                f"Доступные: {[e.value for e in LLMProviderType]}"
+            )
 
-        Args:
-            name (LLMModelNames): Название модели, для которой нужна история.
-
-        Returns:
-            List[Any]: Список объектов истории в формате, который понимает SDK провайдера.
-        """
-        method_name = self.HISTORY.get(name, "get_gemini")
-        history_type = getattr(self.history_manager, method_name)
-        return history_type()
+        logger.info(f"LLM провайдер: {cls.__name__} (профиль: '{name}')")
+        return cls(
+            profile,
+            max_output_tokens=self.config.max_output_tokens,
+            max_turns=self.config.max_turns,
+        )

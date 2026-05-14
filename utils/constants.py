@@ -1,13 +1,14 @@
 from enum import StrEnum
 
 
-class LLMModelNames(StrEnum):
+class LLMProviderType(StrEnum):
     """
-    Перечисление доступных провайдеров языковых моделей (LLM).
+    Тип провайдера для LLM.
     """
 
-    GEMINI = "gemini"
+    OPENAI = "openai"
     OLLAMA = "ollama"
+    LM_STUDIO = "lm_studio"
 
 
 class TTSModes(StrEnum):
@@ -16,4 +17,5 @@ class TTSModes(StrEnum):
     """
 
     SPEED = "speed"
-    QUALITY = "quality"
+    CLONE = "clone"
+    EMOTIONAL = "emotional"

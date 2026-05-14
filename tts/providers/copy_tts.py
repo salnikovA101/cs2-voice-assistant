@@ -1,34 +1,38 @@
 import sounddevice as sd
 import numpy as np
 import torch
+import keyboard
 import logging
 from faster_qwen3_tts import FasterQwen3TTS
 import time
 import asyncio
+from typing import Optional
 from tts.base import BaseTTSProvider
-from utils.config import TtsConfig, QualityTtsConfig
+from utils.config import TtsConfig, CloneTtsConfig
 
 logger = logging.getLogger(__name__)
 
 
-class QualityTTSProvider(BaseTTSProvider):
+class CopyTTSProvider(BaseTTSProvider):
     """
-    Провайдер высококачественного синтеза речи на базе модели FasterQwen3TTS.
+    Провайдер высококачественного синтеза речи на базе модели FasterQwen3TTS (режим COPY).
 
     Ориентирован на естественное звучание и клонирование голоса, используя
     возможности видеокарт NVIDIA для инференса в формате bfloat16.
     """
 
-    def __init__(self, config: TtsConfig) -> None:
+    def __init__(self, config: TtsConfig, ptt_key: str = "right ctrl") -> None:
         """
         Инициализирует модель QwenTTS с загрузкой весов в видеопамять.
 
         Args:
             config (TtsConfig): Общий объект конфигурации, из которого извлекаются
-                настройки секции 'quality'.
+                настройки секции 'clone'.
+            ptt_key (str): Клавиша Push-to-Talk для прерывания озвучки.
         """
-        self.config: QualityTtsConfig = config.quality
-        logger.info(f"Загрузка TTS {self.config.model}...")
+        self.config: CloneTtsConfig = config.clone
+        self.ptt_key = ptt_key
+        logger.info(f"Загрузка TTS {self.config.model} (COPY mode)...")
         self.model = FasterQwen3TTS.from_pretrained(
             model_name=self.config.model,
             device=self.config.device,
@@ -36,9 +40,9 @@ class QualityTTSProvider(BaseTTSProvider):
             max_seq_len=self.config.max_seq_len,
             dtype=torch.bfloat16,
         )
-        logger.info("QwenTTS готов")
+        logger.info("QwenTTS (COPY) готов")
 
-    async def voiceover(self, text: str) -> None:
+    async def voiceover(self, text: str, instruct: Optional[str] = None) -> None:
         """
         Асинхронно запускает процесс озвучивания текста.
 
@@ -62,16 +66,25 @@ class QualityTTSProvider(BaseTTSProvider):
         if hasattr(self, "model"):
             del self.model
             torch.cuda.empty_cache()
-            logger.debug("FasterQwen3TTS выгружена из VRAM")
+            logger.debug("FasterQwen3TTS (COPY) выгружена из VRAM")
 
     def warmup(self) -> None:
         """
-        Выполняет 'прогрев' модели коротким тестовым словом.
+        Выполняет тихий 'прогрев' модели коротким тестовым словом.
 
-        Это заставляет CUDA инициализировать ядра и аллоцировать память,
-        чтобы избежать задержки при первом реальном обращении.
+        Генерирует один чанк аудио без воспроизведения, чтобы CUDA
+        инициализировала ядра и аллоцировала память.
         """
-        self._voiceover_sync("Слушаю")
+        for _ in self.model.generate_voice_clone_streaming(
+            text="Прогрев",
+            language=self.config.language,
+            ref_audio=self.config.ref_voice,
+            ref_text=self.config.ref_text,
+            chunk_size=self.config.chunk_size,
+            xvec_only=True,
+        ):
+            break
+        logger.info("QwenTTS (COPY) прогрет (тихо)")
 
     def _voiceover_sync(self, text: str) -> None:
         """
@@ -101,8 +114,11 @@ class QualityTTSProvider(BaseTTSProvider):
                 chunk_size=self.config.chunk_size,
                 xvec_only=True,
             ):
+                if keyboard.is_pressed(self.ptt_key):
+                    logger.info("Озвучка прервана пользователем")
+                    break
                 stream.write(np.asarray(audio_chunk, dtype=np.float32).reshape(-1, 1))
 
                 if first_chunk:
-                    logger.debug(f"TTS: {time.perf_counter() - start:.2f} сек")
+                    logger.debug(f"TTS (COPY): {time.perf_counter() - start:.2f} сек")
                     first_chunk = False

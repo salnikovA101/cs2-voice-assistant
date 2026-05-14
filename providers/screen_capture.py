@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class OCRProvider:
+class ScreenCapture:
     """
     Класс для высокоскоростного захвата экрана с использованием библиотеки DXcam.
     """
@@ -54,5 +54,16 @@ class OCRProvider:
         frame = self.camera.grab()
         while frame is None:
             frame = self.camera.grab()
-        logger.debug("OCR: сделал снимок")
+        logger.debug("ScreenCapture: сделал снимок")
         return frame
+
+    def release(self) -> None:
+        """
+        Освобождает DXcam и DirectX ресурсы.
+        """
+        try:
+            if hasattr(self, "camera") and self.camera:
+                self.camera.release()
+                logger.debug("DXcam освобождён")
+        except Exception as e:
+            logger.error(f"Ошибка при освобождении DXcam: {e}")
