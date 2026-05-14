@@ -2,7 +2,7 @@
 
 > A modular, multimodal AI agent with real-time voice interaction, screen perception, emotional TTS, and autonomous tool calling.
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-blue?logo=python)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
@@ -15,10 +15,10 @@
 - **🖥️ Screen Perception** — Опциональный захват экрана через `DXcam` для передачи изображения в мультимодальный LLM.
 - **🛠️ Autonomous Tool Calling** — Ассистент автономно выбирает и вызывает инструменты:
   - `launch_cs2` — запуск CS2 с проверкой свободной VRAM
-  - `enable_game_mode` — переключение на быстрый профиль LLM + игровой промпт
+  - `enable_game_mode` — переключение на легкий профиль LLM
   - `get_system_stats` — CPU/GPU/RAM телеметрия в реальном времени
   - `play_youtube_video` — поиск и запуск видео на YouTube
-  - `web_search` — поиск в интернете без браузера
+  - `web_search` — поиск в интернете без браузера, модель анализирует запрос и выдает ответ в текстовом формате
   - `set_timer` / `cancel_timer` — управление таймерами
 - **⚡ Async Pipeline** — Весь цикл построен на `asyncio`, тяжёлые вычисления вынесены в потоки — минимальные задержки.
 
@@ -26,35 +26,64 @@
 
 ## 🏗️ Architecture
 
-```
+```text
 cs2-voice-assistant/
+├── .github/
+│   └── workflows/
+│       └── tests.yml           # CI: Автоматическое тестирование
 ├── core/
-│   └── assistant.py        # Главный класс: оркестрация пайплайна
+│   └── assistant.py            # Главный класс: оркестрация пайплайна
 ├── llm/
-│   ├── base.py             # BaseLLMProvider: цикл tool calling
-│   ├── manager.py          # Выбор провайдера по профилю
-│   ├── prompt_loader.py    # Загрузка промптов из файлов
-│   └── providers/          # openai, ollama, lm_studio
+│   ├── base.py                 # BaseLLMProvider: запросы к llm и цикл tool calling
+│   ├── history_manager.py      # Управление контекстом диалога
+│   ├── manager.py              # Выбор провайдера по профилю
+│   ├── prompt_loader.py        # Загрузка промптов из файлов
+│   └── providers/
+│       ├── lm_studio_provider.py
+│       ├── ollama_provider.py
+│       └── openai_provider.py  # OpenAI-compatible провайдер
 ├── tts/
-│   ├── base.py             # BaseTTSProvider
-│   ├── manager.py          # Выбор TTS провайдера
-│   └── providers/          # emotional, copy_base, speed
+│   ├── base.py                 # BaseTTSProvider: абстрактный класс для озвучки
+│   ├── manager.py              # Выбор TTS провайдера
+│   └── providers/
+│       ├── copy_tts.py         # Клонирование голоса
+│       ├── emotional_tts.py    # Эмоциональный синтез
+│       └── speed_tts.py        # Ускоренный синтез для игр
 ├── providers/
-│   ├── stt_provider.py     # Faster-Whisper STT
-│   └── screen_capture.py  # DXcam захват экрана
+│   ├── screen_capture.py       # DXcam: быстрый захват экрана
+│   └── stt_provider.py         # Faster-Whisper: распознавание речи
 ├── tools/
-│   ├── base.py             # @tool декоратор + схема OpenAI
-│   ├── registry.py         # Автоматическая регистрация инструментов
-│   └── implementations/    # Реализации всех инструментов
+│   ├── base.py                 # @tool декоратор + генерация JSON схем
+│   ├── registry.py             # Автоматическая регистрация инструментов
+│   └── implementations/
+│       ├── game_mode.py        # Настройка игрового режима
+│       ├── launch_cs2.py       # Запуск игры
+│       ├── system_stats.py     # Мониторинг CPU/GPU/RAM
+│       ├── timer.py            # Таймеры
+│       ├── web_search.py       # Web поиск
+│       └── youtube.py          # Управление музыкой/видео
 ├── utils/
-│   ├── config.py           # Pydantic Settings конфигурация
-│   ├── audio_recorder.py   # Push-to-Talk запись
-│   └── constants.py
-├── prompts/                # Системные промпты (.txt)
-├── voices/                 # Референсные аудио для клонирования голоса
-├── config.yaml             # Основной конфиг
-├── .env                    # API ключи
-└── main.py                 # Точка входа
+│   ├── audio_recorder.py       # Запись микрофона (PTT/VAD)
+│   ├── config.py               # Валидация конфигурации через Pydantic
+│   └── constants.py            # Глобальные константы
+├── prompts/
+│   ├── logic.txt               # Промпт логики ассистента
+│   ├── output_clone.txt        # Шаблоны для клонирования
+│   ├── output_emotional.txt    # Шаблоны для эмоций
+│   └── output_speed.txt        # Промпты для быстрой речи
+├── tests/                      # Набор Unit-тестов
+│   ├── test_config.py
+│   ├── test_llm_base.py
+│   ├── test_tool_decorator.py
+│   └── test_tool_registry.py
+├── voices/                     # Аудио-референсы (.wav)
+├── config.yaml                 # Настройки (LLM, TTS, Hotkeys)
+├── requirements.txt            # Зависимости проекта
+├── .env                        # API ключи
+├── .gitignore
+├── LICENSE
+├── README.md                   # Документация
+└── main.py                     # Точка входа в приложение
 ```
 
 ---
@@ -63,7 +92,7 @@ cs2-voice-assistant/
 
 | Категория | Библиотеки |
 |---|---|
-| **Core** | Python 3.10+, asyncio |
+| **Core** | Python 3.13+, asyncio |
 | **STT** | `faster-whisper` (large-v3-turbo, CUDA) |
 | **LLM** | `openai` SDK (универсальный интерфейс) |
 | **TTS** | `faster-qwen3-tts`, `silero` |
