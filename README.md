@@ -77,7 +77,7 @@ cs2-voice-assistant/
 
 ### Prerequisites
 
-- Python **3.10+**
+- Python **3.13+**
 - CUDA-compatible GPU (рекомендуется RTX серии)
 - [Ollama](https://ollama.com/) — если используете локальные модели
 
