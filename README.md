@@ -2,7 +2,7 @@
 
 > A modular, multimodal AI agent with real-time voice interaction, screen perception, emotional TTS, and autonomous tool calling.
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-blue?logo=python)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
