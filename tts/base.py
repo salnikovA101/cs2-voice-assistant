@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class BaseTTSProvider(ABC):
@@ -10,7 +11,7 @@ class BaseTTSProvider(ABC):
     """
 
     @abstractmethod
-    async def voiceover(self, text: str) -> None:
+    async def voiceover(self, text: str, instruct: Optional[str] = None) -> None:
         """
         Преобразует текст в аудио и воспроизводит его.
 

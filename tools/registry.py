@@ -1,110 +1,74 @@
-import webbrowser
+import importlib
+import inspect
 import logging
-from typing import Callable, Dict, List
-import urllib.request
-import urllib.parse
-import re
+import pkgutil
+from pathlib import Path
+from typing import Callable, Dict, List, Any
+
+from tools.base import TOOL_MARKER
+import tools.implementations
 
 logger = logging.getLogger(__name__)
 
 
-class Tools:
+class ToolRegistry:
     """
-    Класс-регистратор инструментов (Tools/Functions) для LLM-ассистента.
+    Автоматический реестр инструментов (Tools/Functions) для LLM-ассистента.
 
-    Содержит методы для взаимодействия с операционной системой, игровыми клиентами
-    и веб-сервисами. Эти методы предназначены для вызова моделью через механизм
-    Function Calling.
+    Сканирует пакет `tools.implementations` и регистрирует все функции,
+    помеченные декоратором `@tool`. Это позволяет добавлять новые инструменты
+    простым созданием файла в папке `tools/implementations/` — без правки реестра.
     """
 
-    def __init__(self, switch_model_callback: Callable):
+    def __init__(self, switch_model_callback: Callable) -> None:
         """
-        Инициализирует реестр инструментов.
+        Инициализирует реестр: устанавливает callback и сканирует инструменты.
 
         Args:
             switch_model_callback (Callable): Функция обратного вызова для переключения
                 активной языковой модели (используется в Game Mode).
         """
-        self.switch_model_callback = switch_model_callback
+        from tools.implementations import game_mode
 
-    def launch_cs2(self) -> str:
-        """
-        Launches Counter-Strike 2 (CS2) via Steam.
-        Use this when the user expresses a desire to play, start, or open Counter-Strike, CS2, or "контра".
-        Example triggers: "запусти кс", "давай играть в кс", "open cs2".
-        """
-        try:
-            webbrowser.open("steam://rungameid/730")
-            logger.debug("Инструмент выполнен: launch_cs2")
-            return "Command sent to Steam to launch Counter-Strike 2."
-        except Exception as e:
-            logger.error(f"Ошибка запуска CS2: {e}")
-            return f"Failed to launch CS2: {str(e)}"
+        game_mode.set_switch_model_callback(switch_model_callback)
 
-    def enable_game_mode(self) -> str:
-        """
-        Activates the specialized Game Mode and switches the underlying LLM to Gemini for better tactical analysis.
-        Use this when the user wants to start a training session, enables 'game mode', or says 'включи игровой режим' / 'режим игры'.
-        """
-        try:
-            self.switch_model_callback()
-            logger.debug("Инструмент выполнен: enable_game_mode")
-            return (
-                "Successfully enabled Game Mode. The model is now switched to GEMINI."
-            )
-        except Exception as e:
-            logger.error(f"Ошибка переключения в Game Mode: {e}")
-            return f"Failed to switch to Game Mode: {str(e)}"
+        self._tools: Dict[str, Callable] = {}
+        self._schemas: List[Dict[str, Any]] = []
+        self._discover()
 
-    def play_youtube_video(self, query: str) -> str:
+    def _discover(self) -> None:
         """
-        Searches YouTube for a video and opens the first result.
-        Use this when the user wants to watch a video, listen to music, or find gameplay.
-
-        Args:
-            query (str): The specific search term extracted from the user's request.
-                        Exclude phrases like "открой на ютубе" or "найди видео".
-                        Example: if user says "найди на ютубе музыку для катки", query should be "музыка для катки".
+        Автоматически обнаруживает все @tool-функции в пакете tools.implementations.
         """
-        try:
-            query_string = urllib.parse.urlencode({"search_query": query})
-            url = f"https://www.youtube.com/results?{query_string}"
-            html_content = urllib.request.urlopen(url)
-            search_results = re.findall(
-                r"watch\?v=(\S{11})", html_content.read().decode()
-            )
-            if search_results:
-                video_url = f"https://www.youtube.com/watch?v={search_results[0]}"
-                webbrowser.open(video_url)
-                logger.debug(
-                    f"Инструмент выполнен: play_youtube_video, запрос: '{query}'"
-                )
-                return f"Successfully opened the first YouTube video for: {query}"
-            else:
-                logger.warning(f"Видео не найдено по запросу: '{query}'")
-                return f"No YouTube results found for: {query}"
+        package_path = Path(tools.implementations.__file__).parent
 
-        except Exception as e:
-            logger.error(f"Ошибка поиска на YouTube: {e}")
-            return f"Failed to play YouTube video: {str(e)}"
+        for _, module_name, _ in pkgutil.iter_modules([str(package_path)]):
+            full_name = f"tools.implementations.{module_name}"
+            try:
+                module = importlib.import_module(full_name)
+            except Exception as e:
+                logger.warning(f"Не удалось импортировать модуль '{full_name}': {e}")
+                continue
 
-    def get_tools_list(self) -> List[Callable]:
-        """
-        Возвращает список всех доступных функций-инструментов.
+            for name, obj in inspect.getmembers(module, inspect.isfunction):
+                if getattr(obj, TOOL_MARKER, False):
+                    self._tools[name] = obj
+                    self._schemas.append(obj.openai_schema)
+                    logger.debug(f"Зарегистрирован инструмент: {name}")
 
-        Returns:
-            List[Callable]: Список методов класса Tools.
-        """
-        return [self.launch_cs2, self.enable_game_mode, self.play_youtube_video]
+        logger.info(
+            f"ToolRegistry: обнаружено {len(self._tools)} инструментов: "
+            f"{list(self._tools.keys())}"
+        )
 
     def get_tool_map(self) -> Dict[str, Callable]:
         """
-        Создает словарь соответствия имен функций их объектам.
-
-        Используется для быстрого вызова нужного метода после того, как LLM
-        вернет имя инструмента для выполнения.
-
-        Returns:
-            Dict[str, Callable]: Словарь вида {'название_функции': объект_функции}.
+        Возвращает словарь {имя_функции: callable} для вызова LLM.
         """
-        return {func.__name__: func for func in self.get_tools_list()}
+        return dict(self._tools)
+
+    def get_openai_tools(self) -> List[Dict[str, Any]]:
+        """
+        Возвращает список инструментов в формате OpenAI JSON Schema.
+        """
+        return list(self._schemas)

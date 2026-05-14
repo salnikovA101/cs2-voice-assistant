@@ -9,7 +9,16 @@ PyYAML
 soundfile
 faster_qwen3_tts
 opencv-python
-google-genai
 python-dotenv
 torch
 dxcam
+openai
+pydantic
+pydantic-settings
+silero
+pynvml
+yt-dlp
+pyperclip
+psutil
+requests
+ddgs

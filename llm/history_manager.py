@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Deque, Dict, List, Any
+from typing import Deque, Dict, List
 
 
 class HistoryManager:
@@ -35,25 +35,13 @@ class HistoryManager:
             and user_text.strip()
             and assistant_text
             and assistant_text.strip()
+            and not assistant_text.startswith("Ошибка:")
         ):
             self.history.append({"user": user_text, "assistant": assistant_text})
 
-    def get_gemini(self) -> List[Dict[str, Any]]:
+    def get_history(self) -> List[Dict[str, str]]:
         """
-        Преобразует историю в формат, совместимый с Google Gemini API (Content/Parts).
-
-        Returns:
-            List[Dict[str, Any]]: Список объектов с ролями 'user' и 'model'.
-        """
-        contents: List[Dict[str, Any]] = []
-        for entry in self.history:
-            contents.append({"role": "user", "parts": [{"text": entry["user"]}]})
-            contents.append({"role": "model", "parts": [{"text": entry["assistant"]}]})
-        return contents
-
-    def get_ollama(self) -> List[Dict[str, str]]:
-        """
-        Преобразует историю в формат, совместимый с Ollama (Messages).
+        Преобразует историю в стандартный формат сообщений OpenAI.
 
         Returns:
             List[Dict[str, str]]: Список сообщений с ролями 'user' и 'assistant'.

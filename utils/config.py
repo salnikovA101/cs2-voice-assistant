@@ -1,85 +1,59 @@
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from google.genai.types import ThinkingConfig, ThinkingLevel
+from typing import Optional
 
-from utils.constants import TTSModes, LLMModelNames
+from utils.constants import TTSModes, LLMProviderType
 
 
-class GeneralConfig(BaseModel):
-    """
-    Общие настройки приложения.
+class OpenAIProfile(BaseModel):
+    """Настройки профиля для OpenAI-совместимого провайдера."""
 
-    Attributes:
-        push_to_talk_key (str): Клавиша активации записи микрофона (PTT).
-        debug_mode (bool): Флаг включения расширенного логирования для отладки.
-    """
+    provider: LLMProviderType = Field(
+        default=LLMProviderType.OPENAI,
+        description="Тип провайдера (openai, ollama, lm_studio)",
+    )
+    model: str = Field(default="", description="Название модели")
+    base_url: str = Field(default="", description="URL адрес API")
+    api_key: str = Field(default="", description="API ключ (если требуется)")
+    temperature: float = Field(default=0.7, description="Температура генерации")
+    context_length: Optional[int] = Field(
+        default=None, description="Длина контекста (окно)"
+    )
 
-    model_config = ConfigDict(frozen=True)
-    push_to_talk_key: str = "right ctrl"
-    debug_mode: bool = False
+    @property
+    def host(self) -> str:
+        """Базовый адрес сервера (scheme + netloc), вычисляется из base_url."""
+        parsed = urlparse(self.base_url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+
+class LlmProfiles(BaseModel):
+    gemini: OpenAIProfile = Field(default_factory=OpenAIProfile)
+    ollama: OpenAIProfile = Field(default_factory=OpenAIProfile)
+    lm_studio: OpenAIProfile = Field(default_factory=OpenAIProfile)
+    other: OpenAIProfile = Field(default_factory=OpenAIProfile)
+
+
+class LlmConfig(BaseModel):
+    current_profile: str = "lm_studio"
+    game_mode: str = "gemini"
+    history_len: int = 6
+    prompt_folder: str = "prompts"
+    max_output_tokens: int = 4096
+    max_turns: int = 5
+    profiles: LlmProfiles = Field(default_factory=LlmProfiles)
 
 
 class SttConfig(BaseModel):
-    """
-    Настройки модуля распознавания речи (Speech-to-Text).
-
-    Attributes:
-        model (str): Название используемой модели Faster Whisper.
-        device (str): Устройство для вычислений ('cuda' или 'cpu').
-        compute_type (str): Тип точности вычислений (например, 'int8_bfloat16').
-        language (str): Код языка для распознавания по умолчанию.
-    """
-
-    model_config = ConfigDict(frozen=True)
     model: str = "large-v3-turbo"
     device: str = "cuda"
     compute_type: str = "int8_bfloat16"
     language: str = "ru"
 
 
-class QualityTtsConfig(BaseModel):
-    """
-    Настройки высококачественного синтеза речи (Quality TTS).
-
-    Attributes:
-        model (str): Путь или идентификатор модели Qwen3-TTS.
-        device (str): Устройство для инференса.
-        attn_implementation (str): Реализация механизма внимания (например, 'sdpa').
-        max_seq_len (int): Максимальная длина последовательности токенов.
-        ref_voice (str): Путь к эталонному аудиофайлу для клонирования голоса.
-        ref_text (str): Текст, произносимый в эталонном аудиофайле.
-        language (str): Язык синтеза.
-        chunk_size (int): Размер фрагмента при потоковой генерации.
-    """
-
-    model_config = ConfigDict(frozen=True)
-    model: str = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
-    device: str = "cuda"
-    attn_implementation: str = "sdpa"
-    max_seq_len: int = 1024
-    ref_voice: str = "voices/example.wav"
-    ref_text: str = ""
-    language: str = "Russian"
-    chunk_size: int = 6
-
-
 class SpeedTtsConfig(BaseModel):
-    """
-    Настройки быстрого синтеза речи (Speed TTS) на базе Silero.
-
-    Attributes:
-        silero_speaker (str): Имя спикера для генерации.
-        sample_rate (int): Частота дискретизации выходного аудио.
-        language (str): Языковой пакет модели.
-        speaker_type (str): Версия / тип модели Silero.
-        device (str): Устройство для вычислений.
-        speaker_name (str): Псевдоним или конкретное имя голоса.
-    """
-
-    model_config = ConfigDict(frozen=True)
     silero_speaker: str = "baya"
     sample_rate: int = 24000
     language: str = "ru"
@@ -88,96 +62,45 @@ class SpeedTtsConfig(BaseModel):
     speaker_name: str = "baya"
 
 
-class GeminiConfig(BaseModel):
-    """
-    Параметры интеграции с Google Gemini API.
-
-    Attributes:
-        model (str): Идентификатор используемой модели.
-        api_key (Optional[str]): Ключ доступа к Google AI Studio.
-        temperature (float): Степень случайности ответов.
-        max_output_tokens (int): Лимит токенов на один ответ.
-        thinking_config (ThinkingConfig): Настройки режима 'рассуждения' (Thinking).
-    """
-
-    model_config = ConfigDict(frozen=True)
-    model: str = "gemma-4-26b-a4b-it"
-    api_key: Optional[str] = None
-    temperature: float = 1.0
-    max_output_tokens: int = 4000
-    max_turns: int = 5
-    thinking_config: ThinkingConfig = Field(
-        default_factory=lambda: ThinkingConfig(thinking_level=ThinkingLevel.HIGH)
-    )
+class CloneTtsConfig(BaseModel):
+    model: str = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+    device: str = "cuda"
+    attn_implementation: str = "sdpa"
+    max_seq_len: int = 2048
+    ref_voice: str = "voices/example.wav"
+    ref_text: str = "Буду, получается, проходить сюжетку Пылью, Женщиной-пауком, ну или какими-нибудь другими супергероями. И, в общем-то, надеюсь, всё получится. Погнали!"
+    language: str = "Russian"
+    chunk_size: int = 4
 
 
-class OllamaConfig(BaseModel):
-    """
-    Настройки для локального запуска моделей через Ollama.
-
-    Attributes:
-        model (str): Название локальной модели.
-        host (str): Адрес API локального сервера Ollama.
-        think (bool): Флаг включения процесса размышления модели.
-        temperature (float): Степень случайности ответов.
-        max_output_tokens (int): Лимит токенов на один ответ.
-        num_ctx (int): Размер контекстного окна.
-    """
-
-    model_config = ConfigDict(frozen=True)
-    model: str = "qwen3.5:0.8b"
-    host: str = "http://127.0.0.1:11434"
-    think: bool = True
-    temperature: float = 0.6
-    max_output_tokens: int = 4000
-    num_ctx: int = 8192
-    max_turns: int = 5
+class EmotionalTtsConfig(BaseModel):
+    model: str = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+    device: str = "cuda"
+    attn_implementation: str = "sdpa"
+    max_seq_len: int = 2048
+    language: str = "Russian"
+    chunk_size: int = 4
+    voice_id: str = "Aiden"
 
 
 class TtsConfig(BaseModel):
-    """
-    Группирующая конфигурация для модулей TTS.
-
-    Attributes:
-        mode (TTSModes): Текущий выбранный режим (SPEED или QUALITY).
-        speed (SpeedTtsConfig): Настройки быстрого режима.
-        quality (QualityTtsConfig): Настройки качественного режима.
-    """
-
-    mode: TTSModes = TTSModes.SPEED
+    mode: TTSModes = TTSModes.CLONE
     speed: SpeedTtsConfig = Field(default_factory=SpeedTtsConfig)
-    quality: QualityTtsConfig = Field(default_factory=QualityTtsConfig)
+    clone: CloneTtsConfig = Field(default_factory=CloneTtsConfig)
+    emotional: EmotionalTtsConfig = Field(default_factory=EmotionalTtsConfig)
 
 
-class LlmConfig(BaseModel):
-    """
-    Конфигурация логики текстового ИИ (LLM).
-
-    Attributes:
-        current_model (LLMModelNames): Выбранный провайдер модели (Gemini или Ollama).
-        history_len (int): Количество последних сообщений, хранимых в памяти диалога.
-        prompt_mode (str): Выбранный режим системного промпта.
-        prompt_folder (str): Путь к папке с текстовыми файлами промптов.
-        gemini (GeminiConfig): Настройки для Gemini.
-        ollama (OllamaConfig): Настройки для Ollama.
-    """
-
-    current_model: LLMModelNames = LLMModelNames.GEMINI
-    history_len: int = 3
-    prompt_mode: str = "humor"
-    prompt_folder: str = "prompts"
-    gemini: GeminiConfig = Field(default_factory=GeminiConfig)
-    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+class GeneralConfig(BaseModel):
+    push_to_talk_key: str = "right ctrl"
+    image: bool = True
+    debug_mode: bool = False
+    enable_voice_output: bool = True
+    enable_text_input: bool = True
+    enable_voice_input: bool = True
+    delay_between_questions: float = 1.0
 
 
 class AppConfig(BaseSettings):
-    """
-    Корневой класс конфигурации всего приложения.
-
-    Использует pydantic-settings для автоматической загрузки параметров
-    из YAML-файла и переменных окружения (.env).
-    """
-
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", env_nested_delimiter="__"
     )
@@ -186,19 +109,40 @@ class AppConfig(BaseSettings):
     tts: TtsConfig = Field(default_factory=TtsConfig)
     llm: LlmConfig = Field(default_factory=LlmConfig)
 
-    @classmethod
-    def load(cls, yaml_path: str | Path = "config.yaml") -> "AppConfig":
-        """
-        Загружает конфигурацию из YAML-файла с приоритетом над значениями по умолчанию.
 
-        Args:
-            yaml_path (str | Path): Путь к файлу config.yaml. По умолчанию 'config.yaml'.
+def load_config() -> AppConfig:
+    """
+    Загружает конфигурацию из файла config.yaml и переменных окружения.
+    Выполняет базовую валидацию наличия профилей и источников ввода.
 
-        Returns:
-            AppConfig: Полностью инициализированный объект конфигурации.
-        """
-        yaml_data: Dict[str, Any] = {}
-        if Path(yaml_path).exists():
-            with open(yaml_path, encoding="utf-8") as f:
-                yaml_data = yaml.safe_load(f) or {}
-        return cls(**yaml_data)
+    Returns:
+        AppConfig: Объект конфигурации.
+    """
+    import yaml
+    import logging
+
+    try:
+        with open("config.yaml", "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        logging.getLogger(__name__).warning(
+            "config.yaml не найден, используются значения по умолчанию"
+        )
+        data = {}
+
+    config = AppConfig(**data)
+
+    if not config.general.enable_text_input and not config.general.enable_voice_input:
+        raise ValueError(
+            "Оба источника ввода (текстовый и голосовой) выключены. Работа невозможна."
+        )
+
+    if not config.llm.profiles:
+        raise ValueError(
+            "В конфигурации не задано ни одного LLM профиля (llm.profiles)."
+        )
+
+    return config
+
+
+config = load_config()

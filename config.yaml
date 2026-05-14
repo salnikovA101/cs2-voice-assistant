@@ -1,16 +1,20 @@
 general:
   push_to_talk_key: "right ctrl"
-  debug_mode: False
+  image: true # true / false
+  debug_mode: false # true / false
+  enable_voice_output: true
+  enable_text_input: true
+  enable_voice_input: true
+  delay_between_questions: 0.2
 
-stt: #~1,1гб VRAM
+stt:
   model: "large-v3-turbo"
   device: "cuda"
   compute_type: "int8_bfloat16"
   language: "ru"
 
-tts: #~2,4гб VRAM
-  mode: "quality" # "quality" - Qwen3 или "speed" - Silero v5
-
+tts:
+  mode: "emotional"
   speed:
     silero_speaker: "baya"
     sample_rate: 24000
@@ -18,30 +22,50 @@ tts: #~2,4гб VRAM
     speaker_type: "v5_ru"
     device: "cuda"
     speaker_name: "baya"
-  
-  quality:
+  clone:
     model: "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+    device: "cuda"
     attn_implementation: "sdpa"
-    max_seq_len: 512
+    max_seq_len: 2048
     ref_voice: "voices/example.wav"
     ref_text: "Буду, получается, проходить сюжетку Пылью, Женщиной-пауком, ну или какими-нибудь другими супергероями. И, в общем-то, надеюсь, всё получится. Погнали!"
     language: "Russian"
     chunk_size: 4
+  emotional:
+    model: "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+    device: "cuda"
+    attn_implementation: "sdpa"
+    max_seq_len: 2048
+    voice_id: "Ryan"   # Aiden
+    language: "Russian"
+    chunk_size: 4
 
-llm: #~0гб VRAM
-  current_model: "ollama"
-  history_len: 1
-  prompt_mode: "smart" # humor or smart
-  
-  gemini:
-    model: "gemma-4-31b-it"
-    temperature: 1.0
-    max_output_tokens: 4000
-  
-  ollama:
-    model: "qwen3.5:4b"
-    host: "http://127.0.0.1:11434"
-    think: True
-    temperature: 1.0
-    max_output_tokens: 1024
-    num_ctx: 4096
+llm:
+  current_profile: "gemini"
+  game_mode: "gemini"
+  history_len: 6
+  prompt_folder: "prompts"
+  max_output_tokens: 4096
+  max_turns: 8
+  profiles:
+    ollama:
+      provider: "ollama"
+      model: "qwen3.5:9b"
+      base_url: "http://127.0.0.1:11434/v1"
+      temperature: 0.7
+      context_length: 4096
+    lm_studio:
+      provider: "lm_studio"
+      model: "google/gemma-4-e2b"
+      base_url: "http://127.0.0.1:1234/v1"
+      temperature: 0.7
+      context_length: 16384
+    gemini:
+      provider: "openai"
+      model: "gemini-3.1-flash-lite"
+      base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+      temperature: 1.0
+    other:
+      provider: "openai"
+      model: "deepseek/deepseek-v4-flash"
+      temperature: 0.8

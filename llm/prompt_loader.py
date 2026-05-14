@@ -1,36 +1,31 @@
 from pathlib import Path
 import logging
-from typing import Dict
+from utils.constants import TTSModes
 
 logger = logging.getLogger(__name__)
 
 
 class PromptLoader:
     """
-    Класс для загрузки и управления текстовыми промптами из локальной директории.
-
-    Автоматически считывает все файлы .txt в указанной папке и предоставляет
-    удобный доступ к их содержимому по имени файла.
+    Класс для загрузки и управления текстовыми промптами.
+    Загружает базовую логику (logic.txt) и формат вывода для TTS (output_{mode}.txt).
     """
 
-    def __init__(self, folder_name: str) -> None:
+    def __init__(self, folder_name: str, mode: TTSModes) -> None:
         """
-        Инициализирует загрузчик и запускает процесс чтения файлов.
-
-        Args:
-            folder_name (str): Путь к директории, содержащей текстовые файлы промптов.
+        Инициализирует загрузчик и считывает файлы.
         """
-        self.prompts: Dict[str, str] = {}
+        self.logic_text = ""
+        self.output_text = ""
+        self.mode = mode
         self._load(folder_name)
 
     def _load(self, folder_name: str) -> None:
         """
-        Сканирует директорию и загружает содержимое всех .txt файлов в словарь.
-
-        Имена файлов (без расширения) становятся ключами, а их содержимое — значениями.
+        Загружает тексты промптов из файлов logic.txt и output_{mode}.txt.
 
         Args:
-            folder_name (str): Путь к директории для сканирования.
+            folder_name (str): Имя папки с промптами.
         """
         path = Path(folder_name)
         if not path.is_dir():
@@ -39,45 +34,27 @@ class PromptLoader:
             )
             return
 
-        for file_path in path.glob("*.txt"):
-            try:
-                self.prompts[file_path.stem] = file_path.read_text(
-                    encoding="utf-8"
-                ).strip()
-            except Exception as e:
-                logger.error(f"Ошибка при чтении файла {file_path.name}: {e}")
+        logic_file = path / "logic.txt"
+        output_file = path / f"output_{self.mode.value}.txt"
 
-        logger.info(f"Теущие промпты: {sorted(self.prompts)}")
+        try:
+            if logic_file.exists():
+                self.logic_text = logic_file.read_text(encoding="utf-8").strip()
+                logger.info("Промпт logic.txt успешно загружен.")
+            else:
+                logger.warning("Файл logic.txt не найден.")
 
-    def get_prompt(self, name: str) -> str:
+            if output_file.exists():
+                self.output_text = output_file.read_text(encoding="utf-8").strip()
+                logger.info(f"Промпт {output_file.name} успешно загружен.")
+            else:
+                logger.warning(f"Файл {output_file.name} не найден.")
+
+        except Exception as e:
+            logger.error(f"Ошибка при чтении файлов промптов: {e}")
+
+    def get_system_prompt(self) -> str:
         """
-        Возвращает текст конкретного промпта, объединяя его с общим форматом ответа.
-
-        Метод ищет промпт по имени, а также пытается найти файл 'response_format'
-        для добавления общих инструкций по форматированию в конец текста.
-
-        Args:
-            name (str): Имя файла промпта (без .txt).
-
-        Returns:
-            str: Сформированный текст промпта с инструкциями по форматированию.
+        Возвращает объединенный текст промптов.
         """
-        prompt = self.prompts.get(name, "")
-        format = self.prompts.get("response_format", "")
-        return prompt + "\n\n" + format
-
-    def update_folder(self, folder_name: str) -> None:
-        """
-        Полностью обновляет базу промптов, загружая файлы из новой директории.
-
-        Args:
-            folder_name (str): Путь к новой директории с промптами.
-        """
-        self.clear()
-        self._load(folder_name)
-
-    def clear(self) -> None:
-        """
-        Очищает текущий словарь загруженных промптов.
-        """
-        self.prompts.clear()
+        return f"{self.logic_text}\n\n{self.output_text}".strip()
